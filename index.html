@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ultimate XML QA Tool — Structure + GitHub Content Diff + Validation (Single Page)</title>
+<title>CUBE - PDF QA XML Tool </title>
 <style>
 :root{
   --bg:#f6f8fa;
@@ -213,8 +213,8 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
   box-shadow: var(--shadow);
   display:flex;
   flex-direction:column;
-  min-height: calc(100vh - 240px);
-  max-height: calc(100vh - 240px);
+  min-height: calc(100vh - 190px);
+  max-height: calc(100vh - 190px);
 }
 .panel .ph{
   padding:10px 12px;
@@ -571,12 +571,69 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
   .grid, .grid.three{grid-template-columns: 1fr}
   .validation-grid{grid-template-columns:1fr}
 }
+
+/* ===================== GitHub Diff Modal ===================== */
+.modal.large{
+  width: min(1500px, 99vw);
+  max-height: 92vh;
+}
+.gh-tabs{
+  display:flex;
+  gap:8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background:#fff;
+}
+.gh-tab{
+  border:1px solid var(--border);
+  background:#fff;
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:1000;
+  font-size:12px;
+  color: var(--muted);
+  user-select:none;
+}
+.gh-tab.active{
+  background:#111827;
+  border-color:#111827;
+  color:#fff;
+}
+.gh-pane{display:none; padding: 12px;}
+.gh-pane.active{display:block;}
+.gh-note{
+  font-size:12px;
+  color: var(--muted);
+  line-height:1.4;
+  margin-bottom: 8px;
+}
+.diff-toolbar .select{
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:10px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:900;
+  color: var(--text);
+}
+.diff-toolbar .mini{
+  font-size:12px;
+  font-weight:900;
+  color: var(--muted);
+}
+.diff-nav-current{
+  outline: 2px solid rgba(9,105,218,.35);
+  box-shadow: 0 0 0 3px rgba(9,105,218,.12);
+}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>Ultimate XML QA Tool</h1>
-  <div class="sub">Structure view + GitHub‑style <b>CONTENT</b> diff + GitHub‑like validation — single HTML file</div>
+  <img src="https://regtransform.gocube.global/static/media/logo_new.28da31ab.png" alt="CUBE Logo" style="height: 32px; margin-right: 12px; vertical-align: middle;">
+  <h1>CUBE - PDF QA XML Tool - 7</h1>
+  <div class="sub">Structure view with inline GitHub‑style highlights + synced navigation — WEB APP</div>
 </header>
 
 <div class="wrapper">
@@ -649,8 +706,8 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
       </div>
       <div class="right">
         <span class="pill" id="changeCountsPill">Changes: 0</span>
-        <span class="pill" id="validationPill">Checks: —</span>
 
+        <button class="btn small blue" id="ghOpenBtn" title="GitHub-style diff + validation (Raw XML + Content)">GitHub Diff</button>
         <span class="btn small file-btn blue" title="Upload a PDF/Word/text and preview in the 3rd panel">
           Upload Source
           <input type="file" id="srcFileResults" />
@@ -658,13 +715,7 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
 </div>
     </div>
 
-    <div class="tabs" id="tabs">
-      <div class="tab active" data-tab="tree">Structure View</div>
-      <div class="tab" data-tab="diff">Content Diff (GitHub)</div>
-      <div class="tab" data-tab="validation">Validation</div>
-    </div>
-
-    <div class="main active" id="tab-tree">
+        <div class="main active" id="tab-tree">
       <div class="grid" id="treeGrid">
         <div class="panel">
           <div class="ph old">Old</div>
@@ -677,40 +728,7 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
       </div>
     </div>
 
-    <div class="main" id="tab-diff">
-      <div class="diff-wrap">
-        <div class="diff-toolbar">
-          <div class="left">
-            <span class="pill">Split diff</span>
-            <label><input type="checkbox" id="compactToggle" /> Compact (hide unchanged)</label>
-            <label><input type="checkbox" id="headingsToggle" checked /> Include headings</label>
-            <label><input type="checkbox" id="footnotesToggle" checked /> Include footnotes</label>
-          </div>
-          <div class="right">
-            <button class="btn small" id="rebuildDiffBtn">Rebuild diff</button>
-          </div>
-        </div>
-        <div id="diffHost"></div>
-      </div>
-    </div>
-
-    <div class="main" id="tab-validation">
-      <div class="validation-grid" id="validationSummary"></div>
-      <table class="issue-table" id="issueTable" style="display:none">
-        <thead>
-          <tr>
-            <th style="width:90px">Level</th>
-            <th style="width:120px">Code</th>
-            <th>Issue</th>
-            <th style="width:220px">Location</th>
-          </tr>
-        </thead>
-        <tbody id="issueTbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
+    
 
 <!-- Modal -->
 <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
@@ -720,6 +738,32 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
       <button class="close" id="modalClose">Close</button>
     </div>
     <div class="mb" id="modalBody"></div>
+  </div>
+</div>
+
+
+<!-- GitHub Diff + Validation Modal -->
+<div class="modal-backdrop" id="ghBackdrop" aria-hidden="true">
+  <div class="modal large" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="title" id="ghModalTitle">GitHub Diff & Validation</div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span class="pill" id="ghCountsPill">—</span>
+        <button class="close" id="ghClose">Close</button>
+      </div>
+    </div>
+
+    <div class="gh-tabs" role="tablist" aria-label="GitHub diff modes">
+      <button class="gh-tab active" data-pane="xml" role="tab" aria-selected="true">Direct XML Diff</button>
+      <button class="gh-tab" data-pane="content" role="tab" aria-selected="false">Content Diff (from XML)</button>
+      <button class="gh-tab" data-pane="checks" role="tab" aria-selected="false">Validation</button>
+    </div>
+
+    <div class="mb" style="overflow:auto;">
+      <div class="gh-pane active" id="ghPane-xml"></div>
+      <div class="gh-pane" id="ghPane-content"></div>
+      <div class="gh-pane" id="ghPane-checks"></div>
+    </div>
   </div>
 </div>
 
@@ -974,6 +1018,25 @@ function extractTextLinesFromXmlNode(node, lines, ctx){
       lines.push(cellTexts.join(" | "));
       lines.push("");
     }
+    return;
+  }
+
+
+  if(tag === "img"){
+    const src = node.getAttribute("src") || node.getAttribute("data-src") || node.getAttribute("href") || node.getAttribute("base64") || "";
+    const alt = node.getAttribute("alt") || "";
+    const line = src ? `[img] ${src}${alt ? " (" + alt + ")" : ""}` : (alt ? `[img] (${alt})` : "[img]");
+    if(lines.length && lines[lines.length-1].trim() !== "") lines.push("");
+    lines.push(line);
+    lines.push("");
+    return;
+  }
+
+  // Treat common block elements as line boundaries for cleaner content diffs
+  if(/^h[1-6]$/.test(tag) || tag === "div" || tag === "section" || tag === "blockquote"){
+    if(lines.length && lines[lines.length-1].trim() !== "") lines.push("");
+    for(const ch of node.childNodes) extractTextLinesFromXmlNode(ch, lines, ctx);
+    lines.push("");
     return;
   }
 
@@ -1837,6 +1900,26 @@ function splitKeepSpaces(s){
   return str.match(re) || [];
 }
 
+function normalizeTokenForDiff(tok){
+  let t = String(tok ?? "");
+  // Normalize special spaces
+  t = t.replace(/\u00A0|\u202F/g, " ");
+  // Normalize curly quotes to straight quotes (reduces false positives)
+  t = t.replace(/[’‘‛‹›]/g, "'").replace(/[“”„‟«»]/g, '"');
+  // Normalize different dash characters to a hyphen-minus
+  t = t.replace(/[‐‑‒–—―]/g, "-");
+  // Normalize Unicode compatibility forms if available
+  try{ t = t.normalize("NFKC"); }catch(_e){}
+  return t;
+}
+
+function tokenizeForDiff(text){
+  const raw = splitKeepSpaces(text);
+  const norm = raw.map(tok => (/^\s+$/.test(tok) ? " " : normalizeTokenForDiff(tok)));
+  return {raw, norm};
+}
+
+
 function inlineCharDiff(oldSeg, newSeg){
   const A = String(oldSeg ?? "").split("");
   const B = String(newSeg ?? "").split("");
@@ -1896,26 +1979,30 @@ function inlineCharDiff(oldSeg, newSeg){
   return {oldHtml, newHtml};
 }
 
-function inlineTokenDiff(oldLine, newLine){
-  const A = splitKeepSpaces(oldLine);
-  const B = splitKeepSpaces(newLine);
 
-  const m = A.length, n = B.length;
+function inlineTokenDiff(oldLine, newLine){
+  // Inline diff for a single line: use normalized tokens for matching so that
+  // whitespace/dash/quote differences don't cause “random” changes.
+  const A = tokenizeForDiff(oldLine);
+  const B = tokenizeForDiff(newLine);
+
+  const m = A.norm.length, n = B.norm.length;
   const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
   for(let i=1;i<=m;i++){
     for(let j=1;j<=n;j++){
-      dp[i][j] = (A[i-1] === B[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+      dp[i][j] = (A.norm[i-1] === B.norm[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
     }
   }
+
   const ops = [];
   let i=m, j=n;
   while(i>0 || j>0){
-    if(i>0 && j>0 && A[i-1] === B[j-1]){
-      ops.unshift({t:"eq", v:A[i-1]}); i--; j--;
+    if(i>0 && j>0 && A.norm[i-1] === B.norm[j-1]){
+      ops.unshift({t:"eq", a:A.raw[i-1], b:B.raw[j-1]}); i--; j--;
     } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
-      ops.unshift({t:"add", v:B[j-1]}); j--;
+      ops.unshift({t:"add", v:B.raw[j-1]}); j--;
     } else {
-      ops.unshift({t:"del", v:A[i-1]}); i--;
+      ops.unshift({t:"del", v:A.raw[i-1]}); i--;
     }
   }
 
@@ -1924,8 +2011,8 @@ function inlineTokenDiff(oldLine, newLine){
     const o = ops[k];
 
     if(o.t === "eq"){
-      const v = escapeHtml(o.v);
-      oldHtml += v; newHtml += v;
+      oldHtml += escapeHtml(o.a);
+      newHtml += escapeHtml(o.b);
       continue;
     }
 
@@ -1935,6 +2022,14 @@ function inlineTokenDiff(oldLine, newLine){
       const addTok = String(ops[k+1].v ?? "");
       const delIsWs = /^\s+$/.test(delTok);
       const addIsWs = /^\s+$/.test(addTok);
+
+      // If it's only whitespace, treat as equal (don't highlight)
+      if(delIsWs && addIsWs){
+        oldHtml += escapeHtml(delTok);
+        newHtml += escapeHtml(addTok);
+        k++;
+        continue;
+      }
 
       if(!delIsWs && !addIsWs && delTok.length <= 48 && addTok.length <= 48){
         const cd = inlineCharDiff(delTok, addTok);
@@ -2005,25 +2100,26 @@ function mergeRangesWhitespace(ranges, text){
   return out;
 }
 
-function computeTokenDiffRanges(oldText, newText){
-  const oldTokens = splitKeepSpaces(oldText);
-  const newTokens = splitKeepSpaces(newText);
 
-  const edits = myersDiff(oldTokens, newTokens);
-  const oldStarts = tokenStartOffsets(oldTokens);
-  const newStarts = tokenStartOffsets(newTokens);
+function computeTokenDiffRanges(oldText, newText){
+  // NOTE: We diff on *normalized* tokens (whitespace/dash/quote normalized),
+  // but compute highlight ranges using the *original* token lengths.
+  const oldT = tokenizeForDiff(oldText);
+  const newT = tokenizeForDiff(newText);
+
+  const edits = myersDiff(oldT.norm, newT.norm);
+  const oldStarts = tokenStartOffsets(oldT.raw);
+  const newStarts = tokenStartOffsets(newT.raw);
 
   let i=0, j=0;
   const adds = [];
   const dels = [];
 
   edits.forEach(e=>{
-    if(e.op === "equal"){
-      i++; j++;
-      return;
-    }
+    if(e.op === "equal"){ i++; j++; return; }
+
     if(e.op === "delete"){
-      const tok = oldTokens[i] || "";
+      const tok = oldT.raw[i] || "";
       if(tok && !/^\s+$/.test(tok)){
         const s = oldStarts[i];
         dels.push([s, s + tok.length]);
@@ -2031,8 +2127,9 @@ function computeTokenDiffRanges(oldText, newText){
       i++;
       return;
     }
+
     if(e.op === "insert"){
-      const tok = newTokens[j] || "";
+      const tok = newT.raw[j] || "";
       if(tok && !/^\s+$/.test(tok)){
         const s = newStarts[j];
         adds.push([s, s + tok.length]);
@@ -2115,23 +2212,116 @@ function applyStructureContentHighlights(htmlEl, side, node, otherNode){
     return;
   }
 
+  // Helpers (local to keep file single-page)
+  function escapeRegExp(str){
+    return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  function cleanLine(line){
+    return String(line || "")
+      .replace(/\u00A0/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/^[-–—•]\s+/, "") // common bullets
+      .trim();
+  }
+  function isMeaningful(line){
+    const c = cleanLine(line);
+    return c.length >= 10 && /[0-9A-Za-z\u00C0-\u017F]/.test(c);
+  }
+  function findRangesByLine(text, line){
+    const clean = cleanLine(line);
+    if(!isMeaningful(clean)) return [];
+    const pat = escapeRegExp(clean).replace(/ /g, "\\s+");
+    let re;
+    try{ re = new RegExp(pat, "g"); }catch(_e){ return []; }
+    const out = [];
+    let m;
+    while((m = re.exec(text)) !== null){
+      out.push([m.index, m.index + m[0].length]);
+      if(out.length >= 8) break;
+      if(m.index === re.lastIndex) re.lastIndex++;
+    }
+    return out;
+  }
+
   // Changed: highlight token insertions (new) and deletions (old)
   if(st === "changed" && otherNode){
     const thisData = collectTextSpans(htmlEl);
+
     const tmp = document.createElement("div");
     tmp.innerHTML = otherNode.displayHtml || "";
     const otherData = collectTextSpans(tmp);
 
-    const oldText = (side === "new") ? otherData.text : thisData.text;
-    const newText = (side === "new") ? thisData.text : otherData.text;
+    const isNewSide = (side === "new");
 
-    const {adds, dels} = computeTokenDiffRanges(oldText, newText);
+    const oldText = isNewSide ? otherData.text : thisData.text;
+    const newText = isNewSide ? thisData.text : otherData.text;
 
-    if(side === "new"){
-      const mergedAdds = mergeRangesWhitespace(adds, newText);
+    let {adds, dels} = computeTokenDiffRanges(oldText, newText);
+
+// EXTRA (list-item accuracy for “21 points vs 22 points” style changes):
+// Apply a line-level overlay ONLY when the content looks like a numbered/bulleted list.
+// This avoids the “random big green blocks” problem on normal paragraphs.
+const oldLinesRaw = isNewSide ? (otherNode.textLines || []) : (node.textLines || []);
+const newLinesRaw = isNewSide ? (node.textLines || []) : (otherNode.textLines || []);
+
+function looksLikeListItem(line){
+  const t = String(line || "").trim();
+  return /^[-–—•]\s+/.test(t) || /^\(?\d{1,4}\)?\s*[\)\.°:-]\s+/.test(t);
+}
+function normalizeListLine(line){
+  return normalizeTokenForDiff(cleanLine(line))
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+function isListContext(lines){
+  const meaningful = (lines || []).map(l=>String(l||"")).filter(l=>cleanLine(l));
+  const listCount = meaningful.filter(looksLikeListItem).length;
+  return listCount >= 3 && listCount / Math.max(1, meaningful.length) >= 0.3;
+}
+
+const lineRanges = [];
+const doOverlay = isListContext(oldLinesRaw) || isListContext(newLinesRaw);
+
+if(doOverlay){
+  // Only diff list items, not normal paragraphs.
+  const oldList = oldLinesRaw.filter(looksLikeListItem).map(l=>cleanLine(l)).filter(isMeaningful);
+  const newList = newLinesRaw.filter(looksLikeListItem).map(l=>cleanLine(l)).filter(isMeaningful);
+
+  const oldNorm = oldList.map(normalizeListLine);
+  const newNorm = newList.map(normalizeListLine);
+
+  const lineEdits = myersDiff(oldNorm, newNorm);
+  let i = 0, j = 0;
+
+  lineEdits.forEach(e=>{
+    if(e.op === "equal"){ i++; j++; return; }
+
+    if(e.op === "delete"){
+      if(!isNewSide){
+        const line = oldList[i] || "";
+        lineRanges.push(...findRangesByLine(thisData.text, line));
+      }
+      i++;
+      return;
+    }
+
+    if(e.op === "insert"){
+      if(isNewSide){
+        const line = newList[j] || "";
+        lineRanges.push(...findRangesByLine(thisData.text, line));
+      }
+      j++;
+      return;
+    }
+  });
+}
+
+    if(isNewSide){
+      const mergedAdds = mergeRangesWhitespace([...(adds||[]), ...lineRanges], newText);
       applyHighlightRanges(thisData.spans, mergedAdds, "hl-add");
-    } else if(side === "old"){
-      const mergedDels = mergeRangesWhitespace(dels, oldText);
+    } else {
+      const mergedDels = mergeRangesWhitespace([...(dels||[]), ...lineRanges], oldText);
       applyHighlightRanges(thisData.spans, mergedDels, "hl-del");
     }
   }
@@ -2493,7 +2683,7 @@ $("compareBtn").addEventListener("click", ()=>{
     // Render aligned tree panels (TOC gap filling + synced expand/scroll)
     renderAlignedTrees(oldDoc, newDoc);
 
-    // Source panel
+    // Source panel (optional)
     if(state.srcFile){
       ensureSourcePanel();
       renderSourcePreview(state.srcFile);
@@ -2504,43 +2694,17 @@ $("compareBtn").addEventListener("click", ()=>{
       if(sp) sp.remove();
     }
 
-    // Validation
-    const issues = [
-      ...validateDoc(oldDoc, "old"),
-      ...validateDoc(newDoc, "new"),
-      ...validateComparison(oldDoc, newDoc, matchInfo),
-    ];
-    // Sort by severity then code
-    issues.sort((a,b)=> severityRank(b.severity) - severityRank(a.severity) || (a.code||"").localeCompare(b.code||""));
-    state.issues = issues;
-
-    const summary = summarizeIssues(issues);
-    state.validationSummary = summary;
-
     // Update pills
     $("summaryPill").textContent = "Compared";
+    $("summaryPill").classList.remove("ok","warn","err");
+    $("summaryPill").classList.add("ok");
+
     $("changeCountsPill").textContent = "Changes: " + state.changesCount;
-
-    const vPill = $("validationPill");
-    vPill.textContent = `Checks: ${summary.level} (${summary.errors} err, ${summary.warns} warn)`;
-    vPill.classList.remove("ok","warn","err");
-    vPill.classList.add(summary.level === "PASS" ? "ok" : summary.level === "WARN" ? "warn" : "err");
-
-    const sumPill = $("summaryPill");
-    sumPill.classList.remove("ok","warn","err");
-    sumPill.classList.add(summary.level === "PASS" ? "ok" : summary.level === "WARN" ? "warn" : "err");
 
     // Show results view
     $("uploadCard").style.display = "none";
     $("resultsCard").style.display = "block";
     $("topbar").classList.add("active");
-    $("tabs").classList.add("active");
-
-    // Build default diff
-    rebuildMainDiff();
-
-    // Render validation tab content
-    renderValidationTab();
 
   }catch(err){
     alert("Error: " + (err?.message || err));
@@ -2563,7 +2727,8 @@ function rebuildMainDiff(){
   $("diffHost").innerHTML = html;
 }
 
-$("rebuildDiffBtn").addEventListener("click", rebuildMainDiff);
+const _rb = $("rebuildDiffBtn");
+if(_rb) _rb.addEventListener("click", rebuildMainDiff);
 
 function renderValidationTab(){
   const issues = state.issues || [];
@@ -2674,9 +2839,545 @@ document.querySelectorAll(".tab").forEach(t=>{
   });
 });
 
+
 /* ============================================================================
-   Downloads (removed)
+   GitHub Diff + Validation (opened from a button)
+   - Direct XML diff (like DiffChecker/GitHub)
+   - Content diff (XML -> readable content: headings/paragraphs/tables/images)
+   - Validation checks (errors/warnings)
 ============================================================================ */
+const ghState = {
+  rendered: {xml:false, content:false, checks:false},
+  nav: {
+    xml: {idx:-1, rows:[]},
+    content: {idx:-1, rows:[]}
+  }
+};
+
+function setGhOpen(open){
+  const b = $("ghBackdrop");
+  if(!b) return;
+  if(open){
+    b.classList.add("show");
+    b.setAttribute("aria-hidden","false");
+  } else {
+    b.classList.remove("show");
+    b.setAttribute("aria-hidden","true");
+  }
+}
+
+function ghSelectPane(name){
+  document.querySelectorAll(".gh-tab").forEach(btn=>{
+    const active = btn.dataset.pane === name;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  document.querySelectorAll(".gh-pane").forEach(p=>{
+    p.classList.toggle("active", p.id === `ghPane-${name}`);
+  });
+
+  // Lazy render per pane
+  if(name === "xml" && !ghState.rendered.xml) renderGhXmlPane();
+  if(name === "content" && !ghState.rendered.content) renderGhContentPane();
+  if(name === "checks" && !ghState.rendered.checks) renderGhChecksPane();
+
+  updateGhCountsPill(name);
+}
+
+function updateGhCountsPill(activePane){
+  const pill = $("ghCountsPill");
+  if(!pill) return;
+
+  if(activePane === "checks"){
+    const sum = summarizeIssues(state.issues || []);
+    pill.textContent = `Checks: ${sum.level} (${sum.errors} err, ${sum.warns} warn)`;
+    pill.classList.remove("ok","warn","err");
+    pill.classList.add(sum.errors ? "err" : sum.warns ? "warn" : "ok");
+    return;
+  }
+
+  const nav = ghState.nav[activePane];
+  const total = nav?.rows?.length || 0;
+  pill.textContent = total ? `Changes: ${total}` : "No changes";
+  pill.classList.remove("ok","warn","err");
+  pill.classList.add(total ? "warn" : "ok");
+}
+
+function splitLines(text){
+  return String(text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
+}
+
+function prettyPrintXml(xml){
+  // Lightweight XML pretty printer (safe for offline use).
+  // Note: keeps text nodes on the same line as their tags when present.
+  const s = String(xml ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  const reg = /(>)(<)(\/*)/g;
+  const withBreaks = s.replace(reg, "$1\n$2$3");
+  const lines = withBreaks.split("\n");
+  let indent = 0;
+  const out = [];
+  const pad = (n)=>"  ".repeat(Math.max(0,n));
+
+  for(let line of lines){
+    const t = line.trim();
+    if(!t) continue;
+
+    const isDecl = /^<\?xml/.test(t) || /^<!DOCTYPE/.test(t) || /^<!--/.test(t);
+    const isClosing = /^<\/[^>]+>/.test(t);
+    const isSelf = /\/>$/.test(t) || /^<[^>]+\/>$/.test(t) || isDecl;
+    const isOpeningOnly =
+      /^<[^!?/][^>]*>$/.test(t) && !/\/>$/.test(t) && !t.includes("</");
+
+    if(isClosing) indent -= 1;
+    out.push(pad(indent) + t);
+    if(isOpeningOnly) indent += 1;
+    if(isDecl || isSelf) { /* no indent change */ }
+  }
+
+  return out.join("\n");
+}
+
+function getXmlLines(xmlText, pretty){
+  const text = pretty ? prettyPrintXml(xmlText) : String(xmlText ?? "");
+  return splitLines(text);
+}
+
+function diffLineStats(grouped){
+  let adds = 0, dels = 0;
+  grouped.forEach(g=>{
+    if(g.op === "insert") adds += 1;
+    else if(g.op === "delete") dels += 1;
+    else if(g.op === "replace"){
+      adds += (g.ins?.length || 0);
+      dels += (g.dels?.length || 0);
+    }
+  });
+  return {adds, dels};
+}
+
+function tokenizeForMode(text, opts){
+  const raw = splitKeepSpaces(text);
+  const norm = raw.map(tok=>{
+    const isWs = /^\s+$/.test(tok || "");
+    if(isWs){
+      return opts.ignoreWhitespace ? " " : String(tok);
+    }
+    let t = String(tok);
+    if(opts.normalizePunct){
+      t = normalizeTokenForDiff(t);
+    } else {
+      // still normalize NBSP to space so line views match typical editors
+      t = t.replace(/\u00A0|\u202F/g, " ");
+      try{ t = t.normalize("NFKC"); }catch(_e){}
+    }
+    if(opts.ignoreWhitespace){
+      t = t.replace(/\s+/g, " ");
+    }
+    return t;
+  });
+  return {raw, norm};
+}
+
+function inlineTokenDiffMode(oldLine, newLine, opts){
+  const A = tokenizeForMode(oldLine, opts);
+  const B = tokenizeForMode(newLine, opts);
+
+  const m = A.norm.length, n = B.norm.length;
+  const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      dp[i][j] = (A.norm[i-1] === B.norm[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+
+  const ops = [];
+  let i=m, j=n;
+  while(i>0 || j>0){
+    if(i>0 && j>0 && A.norm[i-1] === B.norm[j-1]){
+      ops.unshift({t:"eq", a:A.raw[i-1], b:B.raw[j-1]}); i--; j--;
+    } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
+      ops.unshift({t:"add", v:B.raw[j-1]}); j--;
+    } else {
+      ops.unshift({t:"del", v:A.raw[i-1]}); i--;
+    }
+  }
+
+  let oldHtml="", newHtml="";
+  for(let k=0;k<ops.length;k++){
+    const o = ops[k];
+
+    if(o.t === "eq"){
+      oldHtml += escapeHtml(o.a);
+      newHtml += escapeHtml(o.b);
+      continue;
+    }
+
+    // If you choose to ignore whitespace, don't highlight whitespace-only changes
+    if(opts.ignoreWhitespace){
+      if(o.t === "del" && /^\s+$/.test(String(o.v||""))){ oldHtml += escapeHtml(o.v); continue; }
+      if(o.t === "add" && /^\s+$/.test(String(o.v||""))){ newHtml += escapeHtml(o.v); continue; }
+    }
+
+    if(o.t === "del"){
+      oldHtml += `<span class="inl-del">${escapeHtml(o.v)}</span>`;
+    } else if(o.t === "add"){
+      newHtml += `<span class="inl-add">${escapeHtml(o.v)}</span>`;
+    }
+  }
+
+  return {oldHtml, newHtml};
+}
+
+function renderSplitDiffGH(oldLines, newLines, opts){
+  const edits = myersDiff(oldLines, newLines);
+  const grouped = groupEdits(edits);
+
+  // Hide unchanged lines (compact) with context
+  let rows = [];
+  const context = Math.max(0, Number(opts.context ?? 3));
+
+  if(opts.compact){
+    const changedIdx = [];
+    grouped.forEach((g, idx)=>{ if(g.op !== "equal") changedIdx.push(idx); });
+    if(!changedIdx.length){ changedIdx.push(0); }
+    const keep = new Set();
+    changedIdx.forEach(i=>{
+      for(let k=Math.max(0, i-context); k<=Math.min(grouped.length-1, i+context); k++){
+        keep.add(k);
+      }
+    });
+    let lastKept = -1;
+    for(let i=0;i<grouped.length;i++){
+      if(!keep.has(i)) continue;
+      if(lastKept !== -1 && i > lastKept + 1){
+        rows.push({hunk:true, text:`… ${i - lastKept - 1} unchanged lines …`});
+      }
+      rows.push(grouped[i]);
+      lastKept = i;
+    }
+  } else {
+    rows = grouped;
+  }
+
+  let lnA = 1, lnB = 1;
+  let html = `<table class="diff-table">`;
+
+  rows.forEach(r=>{
+    if(r.hunk){
+      html += `<tr><td colspan="4" class="hunk">${escapeHtml(r.text)}</td></tr>`;
+      return;
+    }
+
+    if(r.op === "equal"){
+      html += `<tr class="row-eq">
+        <td class="dln">${lnA++}</td><td class="dcode left">${escapeHtml(r.a)}</td>
+        <td class="dln">${lnB++}</td><td class="dcode right">${escapeHtml(r.a)}</td>
+      </tr>`;
+      return;
+    }
+
+    if(r.op === "delete"){
+      html += `<tr class="row-del">
+        <td class="dln">${lnA++}</td><td class="dcode left">${escapeHtml(r.a)}</td>
+        <td class="dln"></td><td class="dcode right"></td>
+      </tr>`;
+      return;
+    }
+
+    if(r.op === "insert"){
+      html += `<tr class="row-add">
+        <td class="dln"></td><td class="dcode left"></td>
+        <td class="dln">${lnB++}</td><td class="dcode right">${escapeHtml(r.b)}</td>
+      </tr>`;
+      return;
+    }
+
+    if(r.op === "replace"){
+      const max = Math.max(r.dels.length, r.ins.length);
+      for(let i=0;i<max;i++){
+        const aLine = r.dels[i] ?? "";
+        const bLine = r.ins[i] ?? "";
+        let left = escapeHtml(aLine);
+        let right = escapeHtml(bLine);
+
+        if(aLine && bLine){
+          if(opts.precision === "char"){
+            const cd = inlineCharDiff(aLine, bLine);
+            left = cd.oldHtml;
+            right = cd.newHtml;
+          } else {
+            const inl = inlineTokenDiffMode(aLine, bLine, {
+              normalizePunct: !!opts.normalizePunct,
+              ignoreWhitespace: !!opts.ignoreWhitespace
+            });
+            left = inl.oldHtml;
+            right = inl.newHtml;
+          }
+        }
+
+        html += `<tr class="row-repl">
+          <td class="dln">${aLine ? lnA++ : ""}</td><td class="dcode left">${aLine ? left : ""}</td>
+          <td class="dln">${bLine ? lnB++ : ""}</td><td class="dcode right">${bLine ? right : ""}</td>
+        </tr>`;
+      }
+      return;
+    }
+  });
+
+  html += `</table>`;
+  return {html, grouped};
+}
+
+function initDiffNavigation(which, hostEl, prevBtn, nextBtn, pillEl){
+  const rows = [...hostEl.querySelectorAll("tr.row-del, tr.row-add, tr.row-repl")];
+  ghState.nav[which].rows = rows;
+  ghState.nav[which].idx = -1;
+
+  const updatePill = ()=>{
+    const total = rows.length;
+    if(!pillEl) return;
+    pillEl.textContent = total ? `${Math.max(0, ghState.nav[which].idx+1)}/${total}` : "0/0";
+  };
+
+  const jump = (dir)=>{
+    if(!rows.length) return;
+    // clear previous
+    rows.forEach(r=>r.classList.remove("diff-nav-current"));
+    let idx = ghState.nav[which].idx;
+    idx = (typeof idx === "number") ? idx : -1;
+    idx = (idx + dir + rows.length) % rows.length;
+    ghState.nav[which].idx = idx;
+    const row = rows[idx];
+    row.classList.add("diff-nav-current");
+    row.scrollIntoView({behavior:"smooth", block:"center"});
+    updatePill();
+  };
+
+  if(prevBtn) prevBtn.onclick = ()=>jump(-1);
+  if(nextBtn) nextBtn.onclick = ()=>jump(1);
+
+  updatePill();
+}
+
+function renderGhXmlPane(){
+  const host = $("ghPane-xml");
+  if(!host) return;
+  host.innerHTML = `
+    <div class="gh-note">
+      <b>Direct XML Diff:</b> compares the uploaded XML files line-by-line (GitHub/DiffChecker style).<br/>
+      Use <b>Character</b> precision for exact changes (including spaces).
+    </div>
+    <div class="diff-wrap" style="border:none; box-shadow:none;">
+      <div class="diff-toolbar">
+        <div class="left">
+          <span class="pill" id="xmlStatsPill">—</span>
+          <label><input type="checkbox" id="xmlPretty" checked> Pretty</label>
+          <label><input type="checkbox" id="xmlHide" checked> Hide unchanged</label>
+          <label class="mini">Precision</label>
+          <select id="xmlPrecision" class="select">
+            <option value="char" selected>Character</option>
+            <option value="word">Word</option>
+          </select>
+          <label><input type="checkbox" id="xmlNormalize" checked> Normalize quotes/dashes</label>
+          <label><input type="checkbox" id="xmlIgnoreWs"> Ignore whitespace</label>
+        </div>
+        <div class="right">
+          <button class="btn small" id="xmlPrevBtn">Prev</button>
+          <button class="btn small" id="xmlNextBtn">Next</button>
+          <span class="pill" id="xmlNavPill">0/0</span>
+        </div>
+      </div>
+      <div id="xmlDiffHost"></div>
+    </div>
+  `;
+
+  const rerender = ()=>{
+    const pretty = $("xmlPretty").checked;
+    const compact = $("xmlHide").checked;
+    const precision = $("xmlPrecision").value;
+    const normalizePunct = $("xmlNormalize").checked;
+    const ignoreWhitespace = $("xmlIgnoreWs").checked;
+
+    const a = getXmlLines(state.oldText, pretty);
+    const b = getXmlLines(state.newText, pretty);
+
+    const rendered = renderSplitDiffGH(a, b, {compact, context:3, precision, normalizePunct, ignoreWhitespace});
+    $("xmlDiffHost").innerHTML = rendered.html;
+
+    const stats = diffLineStats(rendered.grouped);
+    $("xmlStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+
+    initDiffNavigation("xml", $("xmlDiffHost"), $("xmlPrevBtn"), $("xmlNextBtn"), $("xmlNavPill"));
+    updateGhCountsPill("xml");
+  };
+
+  ["xmlPretty","xmlHide","xmlPrecision","xmlNormalize","xmlIgnoreWs"].forEach(id=>{
+    $(id).addEventListener("change", rerender);
+  });
+
+  rerender();
+  ghState.rendered.xml = true;
+}
+
+function renderGhContentPane(){
+  const host = $("ghPane-content");
+  if(!host) return;
+  host.innerHTML = `
+    <div class="gh-note">
+      <b>Content Diff (from XML):</b> converts XML into readable content (titles, paragraphs, tables, images) and then compares line-by-line.
+    </div>
+    <div class="diff-wrap" style="border:none; box-shadow:none;">
+      <div class="diff-toolbar">
+        <div class="left">
+          <span class="pill" id="contentStatsPill">—</span>
+          <label><input type="checkbox" id="contentHeadings" checked> Include headings</label>
+          <label><input type="checkbox" id="contentFootnotes"> Include footnotes</label>
+          <label><input type="checkbox" id="contentHide" checked> Hide unchanged</label>
+          <label class="mini">Precision</label>
+          <select id="contentPrecision" class="select">
+            <option value="word" selected>Word</option>
+            <option value="char">Character</option>
+          </select>
+          <label><input type="checkbox" id="contentNormalize" checked> Normalize quotes/dashes</label>
+          <label><input type="checkbox" id="contentIgnoreWs"> Ignore whitespace</label>
+        </div>
+        <div class="right">
+          <button class="btn small" id="contentPrevBtn">Prev</button>
+          <button class="btn small" id="contentNextBtn">Next</button>
+          <span class="pill" id="contentNavPill">0/0</span>
+        </div>
+      </div>
+      <div id="contentDiffHost"></div>
+    </div>
+  `;
+
+  const rerender = ()=>{
+    const includeHeadings = $("contentHeadings").checked;
+    const includeFootnotes = $("contentFootnotes").checked;
+    const compact = $("contentHide").checked;
+    const precision = $("contentPrecision").value;
+    const normalizePunct = $("contentNormalize").checked;
+    const ignoreWhitespace = $("contentIgnoreWs").checked;
+
+    const a = buildContentLines(state.oldFlat, {includeHeadings, includeFootnotes});
+    const b = buildContentLines(state.newFlat, {includeHeadings, includeFootnotes});
+
+    const rendered = renderSplitDiffGH(a, b, {compact, context:3, precision, normalizePunct, ignoreWhitespace});
+    $("contentDiffHost").innerHTML = rendered.html;
+
+    const stats = diffLineStats(rendered.grouped);
+    $("contentStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+
+    initDiffNavigation("content", $("contentDiffHost"), $("contentPrevBtn"), $("contentNextBtn"), $("contentNavPill"));
+    updateGhCountsPill("content");
+  };
+
+  ["contentHeadings","contentFootnotes","contentHide","contentPrecision","contentNormalize","contentIgnoreWs"].forEach(id=>{
+    $(id).addEventListener("change", rerender);
+  });
+
+  rerender();
+  ghState.rendered.content = true;
+}
+
+function renderGhChecksPane(){
+  const host = $("ghPane-checks");
+  if(!host) return;
+
+  // Compute issues if not already computed
+  if(!state.issues || !state.issues.length){
+    const issues = [];
+    try{
+      issues.push(...validateDoc(state.oldDoc, "old"));
+      issues.push(...validateDoc(state.newDoc, "new"));
+      const matchInfo = {match: state.match || new Map()};
+      issues.push(...validateComparison(state.oldDoc, state.newDoc, matchInfo));
+    }catch(_e){}
+    state.issues = issues;
+  }
+
+  const issues = state.issues || [];
+  const sum = summarizeIssues(issues);
+
+  const errors = issues.filter(i=>i.severity==="error");
+  const warns = issues.filter(i=>i.severity==="warn");
+
+  host.innerHTML = `
+    <div class="gh-note">
+      <b>Validation:</b> GitHub-like checks for IDs, footnotes, images, and structure changes.
+    </div>
+    <div class="validation-grid" style="margin: 0 0 10px 0;">
+      <div class="check-card">
+        <h3>Overall <span class="pill ${sum.errors ? "err" : sum.warns ? "warn" : "ok"}" style="margin-left:8px">${sum.level}</span></h3>
+        <div class="sum">${sum.errors} errors · ${sum.warns} warnings · ${issues.length} total</div>
+      </div>
+      <div class="check-card">
+        <h3>Errors</h3>
+        <div class="sum">${errors.length} total</div>
+        <div style="margin-top:10px; font-size:12px; color:var(--muted); line-height:1.45">
+          ${(errors.slice(0,4).map(i=>`• <span class="issue-code">${escapeHtml(i.code)}</span> — ${escapeHtml(i.message)}`).join("<br/>")) || "No errors"}
+          ${errors.length>4 ? `<br/><span style="opacity:.9">… and ${errors.length-4} more</span>` : ""}
+        </div>
+      </div>
+      <div class="check-card">
+        <h3>Warnings</h3>
+        <div class="sum">${warns.length} total</div>
+        <div style="margin-top:10px; font-size:12px; color:var(--muted); line-height:1.45">
+          ${(warns.slice(0,4).map(i=>`• <span class="issue-code">${escapeHtml(i.code)}</span> — ${escapeHtml(i.message)}`).join("<br/>")) || "No warnings"}
+          ${warns.length>4 ? `<br/><span style="opacity:.9">… and ${warns.length-4} more</span>` : ""}
+        </div>
+      </div>
+    </div>
+
+    ${issues.length ? `
+    <table class="issue-table">
+      <thead>
+        <tr>
+          <th style="width:90px">Severity</th>
+          <th style="width:150px">Code</th>
+          <th>Message</th>
+          <th style="width:220px">Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${issues.map(i=>`
+          <tr>
+            <td><span class="issue-tag ${i.severity==="error" ? "err" : i.severity==="warn" ? "warn" : "ok"}">${escapeHtml(i.severity.toUpperCase())}</span></td>
+            <td><span class="issue-code">${escapeHtml(i.code)}</span></td>
+            <td>${escapeHtml(i.message)}</td>
+            <td><div class="issue-loc">${escapeHtml(i.location)}${i.path ? " · " + escapeHtml(i.path) : ""}</div></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>` : `<div class="pill ok">PASS — no validation issues found</div>`}
+  `;
+
+  ghState.rendered.checks = true;
+  updateGhCountsPill("checks");
+}
+
+const ghOpenBtn = $("ghOpenBtn");
+if(ghOpenBtn){
+  ghOpenBtn.addEventListener("click", ()=>{
+    state.issues = [];
+    try{
+      state.issues.push(...validateDoc(state.oldDoc, "old"));
+      state.issues.push(...validateDoc(state.newDoc, "new"));
+      state.issues.push(...validateComparison(state.oldDoc, state.newDoc, {match: state.match || new Map()}));
+    }catch(_e){}
+    ghState.rendered = {xml:false, content:false, checks:false};
+    setGhOpen(true);
+    ghSelectPane("xml");
+  });
+}
+
+$("ghClose").addEventListener("click", ()=> setGhOpen(false));
+$("ghBackdrop").addEventListener("click", (e)=>{ if(e.target === $("ghBackdrop")) setGhOpen(false); });
+document.querySelectorAll(".gh-tab").forEach(btn=>{
+  btn.addEventListener("click", ()=> ghSelectPane(btn.dataset.pane));
+});
+
+
 
 </script>
 </body>
