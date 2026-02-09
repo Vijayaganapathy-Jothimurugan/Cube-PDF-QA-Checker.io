@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ultimate XML QA Tool — Structure + GitHub Content Diff + Validation (Single Page)</title>
+<style>
+:root{
+  --bg:#f6f8fa;
+  --panel:#ffffff;
+  --border:#d0d7de;
+  --text:#24292f;
+  --muted:#57606a;
+  --blue:#0969da;
+  --blue2:#0550ae;
+  --green:#1a7f37;
+  --red:#cf222e;
+  --amber:#bf8700;
+  --shadow:0 4px 14px rgba(31,35,40,.08);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+}
+
+header{
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 55%, #a855f7 100%);
+  color:#fff;
+  padding:18px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+}
+header h1{margin:0;font-size:18px;letter-spacing:.2px}
+header .sub{opacity:.9;margin-top:4px;font-size:12px}
+
+.wrapper{
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 10px 10px 16px;
+}
+
+.card{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+/* ===================== Upload ===================== */
+.upload-area{padding:14px}
+.upload-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.upload-grid.has-source{grid-template-columns: 1fr 1fr 1fr}
+.upload-box{
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  cursor:pointer;
+  transition: .18s ease;
+  background: linear-gradient(180deg,#fff, #fbfbfc);
+  min-height: 132px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  position:relative;
+}
+.upload-box:hover{
+  border-color: var(--blue);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(9,105,218,.12);
+}
+.upload-box.has-file{
+  border-style: solid;
+  border-color: rgba(26,127,55,.55);
+  background: linear-gradient(180deg,#f0fff4,#ffffff);
+}
+.upload-box .icon{font-size:34px; margin-bottom:6px}
+.upload-box .title{font-weight:800}
+.upload-box .hint{margin-top:6px;font-size:12px;color:var(--muted)}
+.upload-box .file{margin-top:8px; font-size:12px; color: var(--green); font-weight:800}
+.upload-box input{display:none}
+.upload-box .small-actions{
+  position:absolute; right:10px; top:10px; display:flex; gap:8px;
+}
+.small-pill{
+  font-size:11px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--muted);
+}
+
+/* Buttons */
+.actions{
+  margin-top: 12px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+.btn{
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.15s ease;
+  user-select:none;
+}
+.btn:hover{transform: translateY(-1px); box-shadow: 0 10px 18px rgba(0,0,0,.06)}
+.btn.primary{
+  border-color: transparent;
+  background: linear-gradient(135deg,#0ea5e9 0%, #6366f1 50%, #a855f7 100%);
+  color:#fff;
+}
+.btn.primary:hover{box-shadow: 0 12px 22px rgba(99,102,241,.22)}
+.btn:disabled{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none}
+.btn.small{padding:7px 10px; font-size:12px; border-radius:9px}
+.btn.danger{border-color: rgba(207,34,46,.35); color: var(--red)}
+.btn.ghost{background:transparent}
+.btn.blue{border-color: rgba(9,105,218,.35); color: var(--blue2)}
+.file-btn{
+  position:relative;
+  overflow:hidden;
+}
+.file-btn input{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  cursor:pointer;
+}
+
+/* ===================== Top bar after compare ===================== */
+.topbar{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+}
+.topbar.active{display:flex}
+.topbar .left,.topbar .right{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.pill{
+  font-size:12px;
+  font-weight:800;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--muted);
+}
+.pill.ok{border-color: rgba(26,127,55,.35); color: var(--green)}
+.pill.warn{border-color: rgba(191,135,0,.35); color: var(--amber)}
+.pill.err{border-color: rgba(207,34,46,.35); color: var(--red)}
+
+/* ===================== Tabs ===================== */
+.tabs{
+  display:none;
+  gap:8px;
+  padding:0 12px 12px;
+}
+.tabs.active{display:flex}
+.tab{
+  border:1px solid var(--border);
+  background:#fff;
+  padding:9px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:13px;
+  color: var(--muted);
+  user-select:none;
+}
+.tab.active{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+
+/* ===================== Layout panels ===================== */
+.main{
+  display:none;
+  padding: 0 12px 12px;
+}
+.main.active{display:block}
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+.grid.three{grid-template-columns: 1fr 1fr 1fr}
+
+.panel{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+  display:flex;
+  flex-direction:column;
+  min-height: calc(100vh - 240px);
+  max-height: calc(100vh - 240px);
+}
+.panel .ph{
+  padding:10px 12px;
+  font-weight:900;
+  font-size:13px;
+  color:#fff;
+}
+.ph.old{background:#b42318}
+.ph.new{background:#1a7f37}
+.ph.src{background:#475569}
+.panel .pc{
+  padding:10px 12px;
+  overflow:auto;
+  flex:1;
+}
+
+/* ===================== Tree ===================== */
+.tree-node{margin:6px 0}
+.tree-header{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  cursor:pointer;
+  background:#fff;
+  transition:.12s ease;
+  user-select:none;
+}
+.tree-header:hover{background:#f6f8fa}
+.tree-header .twisty{
+  width:16px; text-align:center; color: var(--muted);
+}
+.tree-header .num{
+  font-family: var(--mono);
+  font-size:12px;
+  color: var(--muted);
+  padding:2px 6px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:#fbfbfb;
+}
+.tree-header .title{
+  font-size:13px;
+  font-weight:900;
+  flex:1;
+  min-width: 0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.badge{
+  font-size:11px;
+  font-weight:900;
+  padding:3px 8px;
+  border-radius:999px;
+  color:#fff;
+}
+.badge.changed{background: #bf8700}
+.badge.added{background: #1a7f37}
+.badge.removed{background:#cf222e}
+.badge.same{background:#6e7781}
+.tree-header.changed{border-left:4px solid #bf8700; background:#fff8c5}
+.tree-header.added{border-left:4px solid #1a7f37; background:#e6ffec}
+.tree-header.removed{border-left:4px solid #cf222e; background:#ffebe9}
+
+.tree-header.gap{
+  border-left:4px solid transparent;
+  background: transparent;
+  opacity: .35;
+}
+.tree-header.nav-current{
+  outline: 3px solid rgba(9,105,218,.35);
+  box-shadow: 0 0 0 4px rgba(9,105,218,.12);
+}
+.footnotes-section{
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.footnotes-section summary{
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 1000;
+  font-size: 13px;
+  color: var(--text);
+  background: #fbfbfb;
+  border-bottom: 1px solid var(--border);
+  list-style: none;
+}
+.footnotes-section summary::-webkit-details-marker{display:none}
+.footnotes-section .fn-list{
+  padding: 10px 12px;
+}
+.fn-meta{
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.fn-item{ word-break: break-word; }
+
+.tree-header .mini-actions{display:flex; gap:6px}
+.icon-btn{
+  font-size:12px;
+  padding:6px 8px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#fff;
+  cursor:pointer;
+  font-weight:900;
+  color: var(--muted);
+}
+.icon-btn:hover{border-color: rgba(9,105,218,.35); color: var(--blue2)}
+.tree-body{
+  margin-left: 20px;
+  margin-top: 6px;
+  border-left: 2px solid #eaeef2;
+  padding-left: 12px;
+  display:none;
+}
+.tree-body.open{display:block}
+.content{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:#fbfbfb;
+  padding: 10px 12px;
+}
+.content .meta{
+  font-size:12px;
+  color: var(--muted);
+  margin-bottom:8px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.content .html{
+  font-size:13px;
+  line-height:1.55;
+}
+.content .html table{
+  width:100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size:12px;
+}
+.content .html th,.content .html td{
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.content .html img{
+  max-width:100%;
+  height:auto;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#fff;
+}
+.fn-box{
+  margin-top:10px;
+  border-left:4px solid #6e7781;
+  background:#fff;
+  border-radius:10px;
+  border:1px solid var(--border);
+  padding:10px 10px;
+}
+.fn-box h4{margin:0 0 8px 0; font-size:12px; color: var(--muted)}
+.fn-item{font-size:12px; margin:6px 0; line-height:1.45}
+.fn-item code{font-family: var(--mono); font-weight:900; color: var(--blue2)}
+.fnref{
+  font-size: 11px;
+  font-weight:900;
+  padding:2px 5px;
+  border-radius:8px;
+  border:1px solid rgba(9,105,218,.35);
+  color: var(--blue2);
+  background:#eef6ff;
+}
+
+/* ===================== Diff view ===================== */
+.diff-wrap{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius: 12px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+}
+.diff-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  background:#fbfbfb;
+}
+.diff-toolbar .left, .diff-toolbar .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.diff-toolbar label{font-size:12px; color: var(--muted); font-weight:900}
+.diff-toolbar input[type="checkbox"]{transform: translateY(1px)}
+.diff-table{
+  width:100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.diff-table td{
+  border-bottom:1px solid #f1f5f9;
+  vertical-align: top;
+}
+.dln{
+  width:54px;
+  text-align:right;
+  padding: 6px 8px;
+  color:#8c959f;
+  background:#f6f8fa;
+  user-select:none;
+  border-right:1px solid #f1f5f9;
+}
+.dcode{
+  padding: 6px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.row-eq .dcode{background:#fff}
+.row-del .dcode.left{background:#ffebe9}
+.row-add .dcode.right{background:#e6ffec}
+.row-repl .dcode.left{background:#ffebe9}
+.row-repl .dcode.right{background:#e6ffec}
+.inl-del{background: rgba(207,34,46,.18); border-radius:6px; padding:0 2px}
+.inl-add{background: rgba(26,127,55,.18); border-radius:6px; padding:0 2px}
+/* ===================== Structure content highlights ===================== */
+.hl-add{background: rgba(26,127,55,.22); border-radius:6px; padding:0 2px}
+.hl-del{background: rgba(207,34,46,.18); border-radius:6px; padding:0 2px; text-decoration: line-through}
+.content.content-added{border-left:4px solid var(--green); background:#f0fff4}
+.content.content-removed{border-left:4px solid var(--red); background:#fff5f5}
+.content.content-changed{border-left:4px solid var(--amber)}
+.hunk{
+  background:#fbfbfb;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size:12px;
+  font-weight:900;
+  text-align:center;
+  padding: 10px;
+}
+
+/* ===================== Validation ===================== */
+.validation-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap:12px;
+}
+.check-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+.check-card h3{margin:0 0 6px 0; font-size:13px}
+.check-card .sum{font-size:12px; color: var(--muted); font-weight:800}
+.issue-table{
+  width:100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
+}
+.issue-table th, .issue-table td{
+  padding: 10px 10px;
+  border-bottom: 1px solid #eef2f6;
+  text-align:left;
+  vertical-align: top;
+  font-size: 12px;
+}
+.issue-table th{background:#fbfbfb; font-size:12px; color: var(--muted)}
+.issue-tag{
+  font-size:11px;
+  font-weight:900;
+  padding: 3px 8px;
+  border-radius:999px;
+  display:inline-block;
+}
+.issue-tag.err{background: rgba(207,34,46,.1); color: var(--red); border:1px solid rgba(207,34,46,.25)}
+.issue-tag.warn{background: rgba(191,135,0,.12); color: var(--amber); border:1px solid rgba(191,135,0,.25)}
+.issue-tag.ok{background: rgba(26,127,55,.1); color: var(--green); border:1px solid rgba(26,127,55,.25)}
+.issue-code{font-family: var(--mono); font-weight:900; color:#334155}
+.issue-loc{font-family: var(--mono); font-size: 11px; color:#64748b}
+
+/* ===================== Modal ===================== */
+.modal-backdrop{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  z-index: 1000;
+}
+.modal-backdrop.show{display:flex}
+.modal{
+  width: min(1200px, 98vw);
+  max-height: 90vh;
+  overflow:hidden;
+  background:#fff;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.2);
+  box-shadow: 0 30px 70px rgba(0,0,0,.25);
+  display:flex;
+  flex-direction:column;
+}
+.modal .mh{
+  padding: 12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px solid var(--border);
+  background:#fbfbfb;
+}
+.modal .mh .title{
+  font-weight:1000;
+  font-size:13px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.modal .mb{
+  padding: 0;
+  overflow:auto;
+}
+.modal .mh .close{
+  border:1px solid var(--border);
+  background:#fff;
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:900;
+}
+
+/* ===================== Source Preview ===================== */
+.source-frame{width:100%; height: 74vh; border:none}
+.source-text{white-space:pre-wrap; font-family: var(--mono); font-size: 12px}
+.source-note{font-size:12px; color: var(--muted); line-height:1.4}
+
+@media (max-width: 1200px){
+  .grid, .grid.three{grid-template-columns: 1fr}
+  .validation-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ultimate XML QA Tool</h1>
+  <div class="sub">Structure view + GitHub‑style <b>CONTENT</b> diff + GitHub‑like validation — single HTML file</div>
+</header>
+
+<div class="wrapper">
+
+  <!-- Upload -->
+  <div class="card upload-area" id="uploadCard">
+    <div class="upload-grid" id="uploadGrid">
+      <label class="upload-box" id="oldBox">
+        <div>
+          <div class="icon">📁</div>
+          <div class="title">Old XML</div>
+          <div class="hint">Click or drop an XML file</div>
+          <div class="file" id="oldInfo"></div>
+        </div>
+        <div class="small-actions">
+          <span class="small-pill">.xml</span>
+        </div>
+        <input type="file" id="oldFile" accept=".xml" />
+      </label>
+
+      <label class="upload-box" id="newBox">
+        <div>
+          <div class="icon">📁</div>
+          <div class="title">New XML</div>
+          <div class="hint">Click or drop an XML file</div>
+          <div class="file" id="newInfo"></div>
+        </div>
+        <div class="small-actions">
+          <span class="small-pill">.xml</span>
+        </div>
+        <input type="file" id="newFile" accept=".xml" />
+      </label>
+
+      <label class="upload-box" id="srcBox" style="display:none">
+        <div>
+          <div class="icon">📄</div>
+          <div class="title">Source Document</div>
+          <div class="hint">PDF / image / text (view‑only)</div>
+          <div class="file" id="srcInfo"></div>
+        </div>
+        <div class="small-actions">
+          <span class="small-pill">view</span>
+        </div>
+        <input type="file" id="srcFile" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="compareBtn" disabled>Compare</button>
+      <button class="btn" id="clearBtn">Clear</button>
+      <button class="btn blue" id="toggleSourceBtn">+ Add Source</button>
+    </div>
+
+    <div style="margin-top:12px; text-align:center; font-size:12px; color: var(--muted); font-weight:800;">
+      Tip: The diff is calculated on <b>extracted readable content</b> (titles, paragraphs, table text, footnote refs), not raw XML tags.
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultsCard" style="display:none; margin-top:14px;">
+    <div class="topbar" id="topbar">
+      <div class="left">
+        <button class="btn small" id="backBtn">← Back</button>
+        <button class="btn small" id="expandAllBtn">Expand all</button>
+        <button class="btn small" id="collapseAllBtn">Collapse</button>
+        <button class="btn small" id="expandChangedBtn">Expand changed</button>
+        <button class="btn small" id="nextChangeBtn">Next change</button>
+            <span class="pill" id="changeNavPill" title="Change navigation">0/0</span>
+            <span class="pill" id="summaryPill">Ready</span>
+      </div>
+      <div class="right">
+        <span class="pill" id="changeCountsPill">Changes: 0</span>
+        <span class="pill" id="validationPill">Checks: —</span>
+
+        <span class="btn small file-btn blue" title="Upload a PDF/Word/text and preview in the 3rd panel">
+          Upload Source
+          <input type="file" id="srcFileResults" />
+        </span>
+</div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="tree">Structure View</div>
+      <div class="tab" data-tab="diff">Content Diff (GitHub)</div>
+      <div class="tab" data-tab="validation">Validation</div>
+    </div>
+
+    <div class="main active" id="tab-tree">
+      <div class="grid" id="treeGrid">
+        <div class="panel">
+          <div class="ph old">Old</div>
+          <div class="pc" id="oldPanel"></div>
+        </div>
+        <div class="panel">
+          <div class="ph new">New</div>
+          <div class="pc" id="newPanel"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main" id="tab-diff">
+      <div class="diff-wrap">
+        <div class="diff-toolbar">
+          <div class="left">
+            <span class="pill">Split diff</span>
+            <label><input type="checkbox" id="compactToggle" /> Compact (hide unchanged)</label>
+            <label><input type="checkbox" id="headingsToggle" checked /> Include headings</label>
+            <label><input type="checkbox" id="footnotesToggle" checked /> Include footnotes</label>
+          </div>
+          <div class="right">
+            <button class="btn small" id="rebuildDiffBtn">Rebuild diff</button>
+          </div>
+        </div>
+        <div id="diffHost"></div>
+      </div>
+    </div>
+
+    <div class="main" id="tab-validation">
+      <div class="validation-grid" id="validationSummary"></div>
+      <table class="issue-table" id="issueTable" style="display:none">
+        <thead>
+          <tr>
+            <th style="width:90px">Level</th>
+            <th style="width:120px">Code</th>
+            <th>Issue</th>
+            <th style="width:220px">Location</th>
+          </tr>
+        </thead>
+        <tbody id="issueTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mh">
+      <div class="title" id="modalTitle">Diff</div>
+      <button class="close" id="modalClose">Close</button>
+    </div>
+    <div class="mb" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   STATE
+============================================================================ */
+const state = {
+  oldFile: null,
+  newFile: null,
+  srcFile: null,
+  oldText: "",
+  newText: "",
+  oldDoc: null,
+  newDoc: null,
+  match: null,           // mapping { oldFlatIndex -> newFlatIndex }
+  oldFlat: [],
+  newFlat: [],
+  oldTree: [],
+  newTree: [],
+  changesCount: 0,
+  issues: [],            // all validation issues
+  validationSummary: null,
+  lastUnifiedDiff: ""    // for download diff
+};
+
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(s){
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
+}
+function normalize(s){
+  return (s ?? "").replace(/\\s+/g," ").trim().toLowerCase();
+}
+
+/* ============================================================================
+   UPLOAD HANDLERS (drag/drop + click)
+============================================================================ */
+function setupDropTarget(boxEl, inputEl){
+  boxEl.addEventListener("dragover", (e)=>{ e.preventDefault(); boxEl.style.borderColor = "var(--blue)"; });
+  boxEl.addEventListener("dragleave", ()=>{ boxEl.style.borderColor = ""; });
+  boxEl.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    boxEl.style.borderColor = "";
+    if(e.dataTransfer.files && e.dataTransfer.files[0]){
+      inputEl.files = e.dataTransfer.files;
+      inputEl.dispatchEvent(new Event("change"));
+    }
+  });
+}
+
+$("oldFile").addEventListener("change", async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  state.oldFile = f;
+  state.oldText = await f.text();
+  $("oldInfo").textContent = "✓ " + f.name;
+  $("oldBox").classList.add("has-file");
+  refreshCompareEnabled();
+});
+
+$("newFile").addEventListener("change", async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  state.newFile = f;
+  state.newText = await f.text();
+  $("newInfo").textContent = "✓ " + f.name;
+  $("newBox").classList.add("has-file");
+  // Auto-copy new -> old if old missing (keeps your previous behavior but safer)
+  if(!state.oldFile){
+    state.oldFile = f;
+    state.oldText = state.newText;
+    $("oldInfo").textContent = "✓ " + f.name + " (auto)";
+    $("oldBox").classList.add("has-file");
+  }
+  refreshCompareEnabled();
+});
+
+function refreshCompareEnabled(){
+  $("compareBtn").disabled = !(state.oldFile && state.newFile);
+}
+
+setupDropTarget($("oldBox"), $("oldFile"));
+setupDropTarget($("newBox"), $("newFile"));
+
+$("toggleSourceBtn").addEventListener("click", ()=>{
+  const visible = $("srcBox").style.display !== "none";
+  if(visible){
+    $("srcBox").style.display = "none";
+    $("uploadGrid").classList.remove("has-source");
+    $("toggleSourceBtn").textContent = "+ Add Source";
+  }else{
+    $("srcBox").style.display = "flex";
+    $("uploadGrid").classList.add("has-source");
+    $("toggleSourceBtn").textContent = "Remove Source";
+  }
+});
+
+$("srcFile").addEventListener("change", (e)=>handleSourceUpload(e.target.files[0], "upload"));
+$("srcFileResults").addEventListener("change", (e)=>handleSourceUpload(e.target.files[0], "results"));
+
+function handleSourceUpload(file, where){
+  if(!file) return;
+  state.srcFile = file;
+  if(where === "upload"){
+    $("srcInfo").textContent = "✓ " + file.name;
+    $("srcBox").classList.add("has-file");
+  }
+  // If results already visible, render source panel immediately
+  if($("resultsCard").style.display !== "none"){
+    ensureSourcePanel();
+    renderSourcePreview(file);
+  }
+}
+
+$("clearBtn").addEventListener("click", ()=>location.reload());
+
+/* ============================================================================
+   XML PARSER (supports nested <level>, extracts readable content from <html>)
+============================================================================ */
+function parseXml(xmlText){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "text/xml");
+  const perr = doc.querySelector("parsererror");
+  if(perr){
+    const msg = perr.textContent || "XML parse error";
+    throw new Error(msg.replace(/\\s+/g," ").trim());
+  }
+  return doc;
+}
+
+function directChildrenByTag(parent, tag){
+  const out = [];
+  for(const ch of parent.childNodes){
+    if(ch.nodeType === 1 && ch.tagName && ch.tagName.toLowerCase() === tag.toLowerCase()){
+      out.push(ch);
+    }
+  }
+  return out;
+}
+
+function xmlChildrenToString(xmlEl){
+  if(!xmlEl) return "";
+  const ser = new XMLSerializer();
+  let s = "";
+  for(const ch of xmlEl.childNodes){
+    s += ser.serializeToString(ch);
+  }
+  return s;
+}
+
+function sanitizeHtml(html){
+  // Very lightweight sanitizer for local/offline use:
+  // - removes script/style/iframe/object/embed
+  // - strips on* handlers and javascript: URLs
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  const removeTags = new Set(["script","style","iframe","object","embed","link","meta"]);
+  tmp.querySelectorAll("*").forEach(el=>{
+    const tag = el.tagName.toLowerCase();
+    if(removeTags.has(tag)){
+      el.remove();
+      return;
+    }
+    // remove event handler attributes
+    [...el.attributes].forEach(a=>{
+      const n = a.name.toLowerCase();
+      const v = (a.value || "").trim();
+      if(n.startsWith("on")) el.removeAttribute(a.name);
+      if((n === "href" || n === "src") && /^javascript:/i.test(v)) el.removeAttribute(a.name);
+    });
+  });
+  return tmp.innerHTML;
+}
+
+function replaceFootnoteRefs(container){
+  // Replace <footnoteref fid="x"/> with a visible marker
+  container.querySelectorAll("footnoteref").forEach(el=>{
+    const fid = el.getAttribute("fid") || el.getAttribute("id") || "?";
+    const sup = document.createElement("sup");
+    sup.className = "fnref";
+    // Short label for readability, full id in tooltip + data-fid
+    const short = (fid.length > 16) ? (fid.slice(0,8) + "…" + fid.slice(-4)) : fid;
+    sup.textContent = "[" + short + "]";
+    sup.title = fid;
+    sup.setAttribute("data-fid", fid);
+    sup.style.cursor = "pointer";
+    el.replaceWith(sup);
+  });
+  // Remove any inline <footnote> blocks from the HTML view (we show them once at the end)
+  container.querySelectorAll("footnote").forEach(el=>el.remove());
+}
+
+function extractTextLinesFromXmlNode(node, lines, ctx){
+  // ctx: {inTable:boolean}
+  if(node.nodeType === 3){
+    const t = node.nodeValue.replace(/\\s+/g," ");
+    if(t.trim()){
+      if(lines.length === 0) lines.push(t.trim());
+      else lines[lines.length-1] += t;
+    }
+    return;
+  }
+  if(node.nodeType !== 1) return;
+
+  const tag = node.tagName.toLowerCase();
+
+  if(tag === "footnoteref"){
+    const fid = node.getAttribute("fid") || "?";
+    if(lines.length === 0) lines.push("[" + fid + "]");
+    else lines[lines.length-1] += " [" + fid + "]";
+    return;
+  }
+
+  if(tag === "br"){
+    lines.push("");
+    return;
+  }
+
+  if(tag === "p"){
+    // start a new line for each paragraph
+    if(lines.length && lines[lines.length-1].trim() !== "") lines.push("");
+    // process children
+    for(const ch of node.childNodes) extractTextLinesFromXmlNode(ch, lines, ctx);
+    lines.push("");
+    return;
+  }
+
+  if(tag === "li"){
+    if(lines.length && lines[lines.length-1].trim() !== "") lines.push("");
+    lines.push("- ");
+    for(const ch of node.childNodes) extractTextLinesFromXmlNode(ch, lines, ctx);
+    lines.push("");
+    return;
+  }
+
+  if(tag === "tr"){
+    // row: join cell texts with " | "
+    const cells = directChildrenByTag(node,"td").concat(directChildrenByTag(node,"th"));
+    const cellTexts = [];
+    cells.forEach(cell=>{
+      const tmpLines = [];
+      for(const ch of cell.childNodes) extractTextLinesFromXmlNode(ch, tmpLines, ctx);
+      const one = tmpLines.join(" ").replace(/\\s+/g," ").trim();
+      if(one) cellTexts.push(one);
+    });
+    if(cellTexts.length){
+      if(lines.length && lines[lines.length-1].trim() !== "") lines.push("");
+      lines.push(cellTexts.join(" | "));
+      lines.push("");
+    }
+    return;
+  }
+
+  // default: walk children
+  for(const ch of node.childNodes) extractTextLinesFromXmlNode(ch, lines, ctx);
+}
+
+function parseDoc(xmlText){
+  const doc = parseXml(xmlText);
+  const body = doc.querySelector("body") || doc.documentElement;
+  const topLevels = directChildrenByTag(body, "level");
+
+  const flat = [];
+  const footnotesById = new Map();
+  const footnoteRefs = [];
+  const imageSrcs = [];
+
+  function walk(levelEl, depth, parentPath, indexInParent){
+    const id = levelEl.getAttribute("id") || "";
+    const num = levelEl.getAttribute("num") || "";
+    const titleEl = directChildrenByTag(levelEl, "title")[0];
+    const title = titleEl ? (titleEl.textContent || "").trim() : "";
+    const path = parentPath ? (parentPath + "/" + (num ? num : ("#"+indexInParent)) + " " + title) : ((num ? num : ("#"+indexInParent)) + " " + title);
+
+    const htmlEl = directChildrenByTag(levelEl, "html")[0] || null;
+    const rawHtmlXml = htmlEl ? xmlChildrenToString(htmlEl) : "";
+    // Footnotes as direct children (common) OR nested somewhere under level
+    const footnoteEls = [...levelEl.querySelectorAll("footnote")].filter(fn => fn.closest("level") === levelEl);
+    const footnotes = [];
+    footnoteEls.forEach(fn=>{
+      const fid = fn.getAttribute("id") || fn.getAttribute("fid") || "";
+      const ftext = (fn.textContent || "").replace(/\\s+/g," ").trim();
+      if(fid){
+        footnotes.push({id: fid, text: ftext});
+        // global map (track duplicates separately in validation)
+        if(!footnotesById.has(fid)) footnotesById.set(fid, []);
+        footnotesById.get(fid).push({path, text: ftext});
+      }
+    });
+
+    // Collect footnote refs and images inside html
+    if(htmlEl){
+      const refs = htmlEl.querySelectorAll("footnoteref");
+      refs.forEach(r=>{
+        const fid = r.getAttribute("fid") || "";
+        if(fid) footnoteRefs.push({fid, path});
+      });
+      const imgs = htmlEl.querySelectorAll("img");
+      imgs.forEach(img=>{
+        const src = img.getAttribute("src") || img.getAttribute("data-src") || img.getAttribute("href") || img.getAttribute("base64") || "";
+        imageSrcs.push({src, path});
+      });
+    }
+
+    // Build display HTML by parsing into HTML DOM and replacing footnoterefs
+    let displayHtml = "";
+    if(rawHtmlXml){
+      const tmp = document.createElement("div");
+      tmp.innerHTML = sanitizeHtml(rawHtmlXml);
+      replaceFootnoteRefs(tmp);
+      displayHtml = tmp.innerHTML;
+    }
+
+    // Build text lines for diff (readable, not tags)
+    const textLines = [];
+    if(htmlEl){
+      for(const ch of htmlEl.childNodes){
+        extractTextLinesFromXmlNode(ch, textLines, {});
+      }
+    }
+    // clean lines
+    const cleanedLines = textLines
+      .map(l => (l ?? "").replace(/\\s+$/g,"").replace(/^\\s+/g,""))
+      .filter((l, idx, arr) => {
+        // keep blank lines but collapse multiple consecutive blanks
+        if(l !== "") return true;
+        if(idx === 0) return false;
+        return arr[idx-1] !== "";
+      });
+
+    // Footnotes lines (always include for diff; user can toggle)
+    const footnoteLines = footnotes.map(fn => `[^${fn.id}]: ${fn.text}`);
+
+    const node = {
+      id, num, title, depth, path,
+      displayHtml,
+      textLines: cleanedLines,
+      footnoteLines,
+      footnotes,
+      children: [],
+      _flatIndex: -1,
+      _status: "same",
+      _match: null
+    };
+    node._flatIndex = flat.length;
+    flat.push(node);
+
+    const childLevels = directChildrenByTag(levelEl, "level");
+    childLevels.forEach((ch, i)=>{
+      node.children.push(walk(ch, depth+1, path, i+1));
+    });
+    return node;
+  }
+
+  const tree = topLevels.map((lv, i)=> walk(lv, 0, "", i+1));
+
+  return {doc, tree, flat, footnotesById, footnoteRefs, imageSrcs};
+}
+
+/* ============================================================================
+   MATCHING OLD vs NEW (id first, then num+title+depth)
+============================================================================ */
+function fallbackKey(node){
+  return `d${node.depth}|${normalize(node.num)}|${normalize(node.title)}`;
+}
+
+function matchDocs(oldFlat, newFlat){
+  const newById = new Map();
+  const newByKey = new Map();
+
+  newFlat.forEach((n, i)=>{
+    if(n.id) newById.set(n.id, i);
+    const k = fallbackKey(n);
+    if(!newByKey.has(k)) newByKey.set(k, []);
+    newByKey.get(k).push(i);
+  });
+
+  const matchedNew = new Set();
+  const match = new Map();
+
+  oldFlat.forEach((o, oi)=>{
+    let ni = null;
+
+    if(o.id && newById.has(o.id) && !matchedNew.has(newById.get(o.id))){
+      ni = newById.get(o.id);
+    } else {
+      const k = fallbackKey(o);
+      const arr = newByKey.get(k) || [];
+      while(arr.length && matchedNew.has(arr[0])) arr.shift();
+      if(arr.length) ni = arr.shift();
+    }
+
+    if(ni !== null && ni !== undefined){
+      match.set(oi, ni);
+      matchedNew.add(ni);
+    }
+  });
+
+  const addedNew = [];
+  newFlat.forEach((n, i)=>{ if(!matchedNew.has(i)) addedNew.push(i); });
+  return {match, addedNew};
+}
+
+function computeStatuses(oldDoc, newDoc, matchInfo){
+  const {match, addedNew} = matchInfo;
+
+  // reset
+  oldDoc.flat.forEach(n=>{ n._status="same"; n._match=null; });
+  newDoc.flat.forEach(n=>{ n._status="same"; n._match=null; });
+
+  let changes = 0;
+
+  // old side
+  oldDoc.flat.forEach((o, oi)=>{
+    const ni = match.get(oi);
+    if(ni === undefined){
+      o._status = "removed";
+      changes++;
+    }else{
+      const n = newDoc.flat[ni];
+      const titleChanged = o.title.trim() !== n.title.trim();
+      const contentChanged = (o.textLines.join("\\n") !== n.textLines.join("\\n")) || (o.footnoteLines.join("\\n") !== n.footnoteLines.join("\\n"));
+      if(titleChanged || contentChanged){
+        o._status = "changed";
+        n._status = "changed";
+        changes++;
+      }
+      o._match = ni;
+      n._match = oi;
+    }
+  });
+
+  // new additions
+  addedNew.forEach((ni)=>{
+    const n = newDoc.flat[ni];
+    n._status = "added";
+    changes++;
+  });
+
+  return changes;
+}
+
+/* ============================================================================
+   ALIGNED TREE RENDER (fills TOC gaps + synced expand/scroll)
+============================================================================ */
+function safeIdPart(s){
+  return encodeURIComponent(String(s||"")).replace(/%/g,"_");
+}
+
+function alignSiblings(oldList, newList){
+  oldList = oldList || [];
+  newList = newList || [];
+
+  // Map: new flat index -> old node (matched)
+  const oldForNew = new Map();
+  oldList.forEach(o=>{
+    if(o && o._match !== null && o._match !== undefined){
+      oldForNew.set(o._match, o);
+    }
+  });
+
+  const newSet = new Set(newList.map(n=>n._flatIndex));
+
+  // Start with new order (keeps "added" nodes where they belong)
+  const res = newList.map(n=>{
+    const o = oldForNew.get(n._flatIndex) || null;
+    return {old:o, new:n, children: []};
+  });
+
+  const usedOld = new Set(res.filter(p=>p.old).map(p=>p.old._flatIndex));
+
+  // Insert old-only nodes (removed/unmatched) close to their original position.
+  for(let i=0;i<oldList.length;i++){
+    const o = oldList[i];
+    if(!o) continue;
+    if(usedOld.has(o._flatIndex)) continue;
+
+    // Find the next old sibling that matches a node in newList, and insert before it.
+    let targetNewIdx = null;
+    for(let j=i+1;j<oldList.length;j++){
+      const nxt = oldList[j];
+      if(nxt && nxt._match !== null && nxt._match !== undefined && newSet.has(nxt._match)){
+        targetNewIdx = nxt._match;
+        break;
+      }
+    }
+
+    let insertPos = res.length;
+    if(targetNewIdx !== null){
+      const pos = res.findIndex(p=>p.new && p.new._flatIndex === targetNewIdx);
+      if(pos >= 0) insertPos = pos;
+    }
+
+    res.splice(insertPos, 0, {old:o, new:null, children: []});
+    usedOld.add(o._flatIndex);
+  }
+
+  // Recurse
+  res.forEach(p=>{
+    const oc = p.old ? p.old.children : [];
+    const nc = p.new ? p.new.children : [];
+    p.children = alignSiblings(oc, nc);
+  });
+
+  return res;
+}
+
+function renderFootnotesSection(docInfo, side){
+  const details = document.createElement("details");
+  details.className = "footnotes-section";
+  details.open = false;
+
+  const count = (docInfo?.footnotesById?.size) || 0;
+  const summary = document.createElement("summary");
+  summary.textContent = `Footnotes (${count})`;
+  details.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.className = "fn-list";
+
+  if(!count){
+    list.innerHTML = `<div class="source-note">(No footnotes found)</div>`;
+    details.appendChild(list);
+    return details;
+  }
+
+  // Order by appearance in the doc (pre-order traversal)
+  const order = [];
+  const seen = new Set();
+  (docInfo.flat || []).forEach(n=>{
+    (n.footnotes || []).forEach(fn=>{
+      const fid = fn?.id || "";
+      if(fid && !seen.has(fid)){
+        seen.add(fid);
+        order.push(fid);
+      }
+    });
+  });
+
+  // Map: fid -> Set(paths where referenced)
+  const refsMap = new Map();
+  (docInfo.footnoteRefs || []).forEach(r=>{
+    if(!r?.fid) return;
+    if(!refsMap.has(r.fid)) refsMap.set(r.fid, new Set());
+    refsMap.get(r.fid).add(r.path || "");
+  });
+
+  order.forEach(fid=>{
+    const defs = docInfo.footnotesById.get(fid) || [];
+    const text = defs[0]?.text || "";
+
+    const item = document.createElement("div");
+    item.className = "fn-item";
+    item.id = `fn-${side}-${safeIdPart(fid)}`;
+    item.innerHTML = `<code>${escapeHtml(fid)}</code> ${escapeHtml(text)}`;
+
+    const refSet = refsMap.get(fid);
+    if(refSet && refSet.size){
+      const paths = [...refSet].filter(Boolean);
+      const show = paths.slice(0,2).map(p=>escapeHtml(p)).join("<br/>");
+      const more = paths.length > 2 ? `<br/><span style="opacity:.9">… +${paths.length-2} more</span>` : "";
+      const meta = document.createElement("div");
+      meta.className = "fn-meta";
+      meta.innerHTML = `<b>Referenced in:</b><br/>${show}${more}`;
+      item.appendChild(meta);
+    }
+    list.appendChild(item);
+  });
+
+  details.appendChild(list);
+  return details;
+}
+
+function setupFootnoteLinking(panelHost, side){
+  // Delegate clicks from inline [fn] markers to the bottom Footnotes section.
+  panelHost.addEventListener("click", (e)=>{
+    const el = e.target;
+    const sup = el && el.closest ? el.closest(".fnref") : null;
+    if(!sup) return;
+    const fid = sup.dataset?.fid || sup.getAttribute?.("data-fid") || sup.title || "";
+    if(!fid) return;
+
+    const target = panelHost.querySelector(`#fn-${side}-${safeIdPart(fid)}`);
+    if(target){
+      target.scrollIntoView({behavior:"smooth", block:"center"});
+      target.classList.add("nav-current");
+      setTimeout(()=> target.classList.remove("nav-current"), 1200);
+    }
+  });
+}
+
+let _scrollSyncAttached = false;
+function setupScrollSync(){
+  if(_scrollSyncAttached) return;
+
+  const oldScroll = $("oldPanel")?.closest(".pc");
+  const newScroll = $("newPanel")?.closest(".pc");
+  if(!oldScroll || !newScroll) return;
+
+  let syncing = false;
+  function sync(from, to){
+    if(syncing) return;
+    syncing = true;
+
+    const fromMax = from.scrollHeight - from.clientHeight;
+    const toMax = to.scrollHeight - to.clientHeight;
+    const progress = fromMax > 0 ? (from.scrollTop / fromMax) : 0;
+    to.scrollTop = progress * Math.max(0, toMax);
+
+    requestAnimationFrame(()=>{ syncing = false; });
+  }
+
+  oldScroll.addEventListener("scroll", ()=> sync(oldScroll, newScroll));
+  newScroll.addEventListener("scroll", ()=> sync(newScroll, oldScroll));
+
+  _scrollSyncAttached = true;
+}
+
+function setAlignOpen(alignId, open){
+  const info = state.alignMap?.get(alignId);
+  if(!info) return;
+
+  info.oldBody.classList.toggle("open", open);
+  info.newBody.classList.toggle("open", open);
+
+  if(info.oldTwisty && info.oldTwisty.textContent) info.oldTwisty.textContent = open ? "▼" : "▶";
+  if(info.newTwisty && info.newTwisty.textContent) info.newTwisty.textContent = open ? "▼" : "▶";
+}
+
+function toggleAlign(alignId){
+  const info = state.alignMap?.get(alignId);
+  if(!info) return;
+  const open = !(info.oldBody.classList.contains("open") || info.newBody.classList.contains("open"));
+  setAlignOpen(alignId, open);
+}
+
+function openAncestors(alignId){
+  let cur = alignId;
+  while(cur){
+    const info = state.alignMap?.get(cur);
+    const parent = info?.parentId;
+    if(parent) setAlignOpen(parent, true);
+    cur = parent;
+  }
+}
+
+function updateChangeNavPill(){
+  const pill = $("changeNavPill");
+  if(!pill) return;
+  const total = (state.changeList || []).length;
+  if(!total){
+    pill.textContent = "0/0";
+    return;
+  }
+  const idx = (state.changeNavIndex ?? -1);
+  pill.textContent = `${Math.max(0, idx+1)}/${total}`;
+}
+
+function navigateToChange(next=true){
+  const list = state.changeList || [];
+  if(!list.length) return;
+
+  // advance pointer
+  if(typeof state.changeNavIndex !== "number") state.changeNavIndex = -1;
+  state.changeNavIndex = next ? (state.changeNavIndex + 1) % list.length
+                              : (state.changeNavIndex - 1 + list.length) % list.length;
+
+  const alignId = list[state.changeNavIndex];
+  openAncestors(alignId);
+
+  const info = state.alignMap.get(alignId);
+  if(!info) return;
+
+  // Clear previous highlight
+  document.querySelectorAll(".tree-header.nav-current").forEach(el=> el.classList.remove("nav-current"));
+  if(info.oldHeader) info.oldHeader.classList.add("nav-current");
+  if(info.newHeader) info.newHeader.classList.add("nav-current");
+
+  // Scroll into view (one side is enough; scroll-sync will follow)
+  if(info.oldHeader && !info.oldHeader.classList.contains("gap")){
+    info.oldHeader.scrollIntoView({behavior:"smooth", block:"center"});
+  } else if(info.newHeader){
+    info.newHeader.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+
+  updateChangeNavPill();
+}
+
+function renderAlignedTrees(oldDoc, newDoc){
+  state.alignMap = new Map();
+  state.changeList = [];
+  state.changeNavIndex = -1;
+
+  const oldHost = $("oldPanel");
+  const newHost = $("newPanel");
+  oldHost.innerHTML = "";
+  newHost.innerHTML = "";
+
+  const alignedRoots = alignSiblings(oldDoc.tree, newDoc.tree);
+
+  const oldRoot = document.createElement("div");
+  const newRoot = document.createElement("div");
+
+  let counter = 0;
+  function nextAlignId(){ counter++; return "A" + counter; }
+
+  function nodeLabel(node, side){
+    if(!node) return {num:"", title:""};
+    return {
+      num: node.num ? node.num : ("L" + (node._flatIndex+1)),
+      title: node.title || "(untitled)",
+    };
+  }
+
+  function statusClass(node){
+    return node? (node._status || "same") : "gap";
+  }
+
+  function badgeText(s){
+    return s === "changed" ? "CHANGED" :
+           s === "added" ? "ADDED" :
+           s === "removed" ? "REMOVED" : String(s||"").toUpperCase();
+  }
+
+  function buildHeader(node, side, alignId, depth, hasBody){
+    const header = document.createElement("div");
+    header.className = "tree-header";
+    header.dataset.alignId = alignId;
+    header.style.marginLeft = (depth * 14) + "px";
+
+    const s = statusClass(node);
+    if(s === "gap"){
+      header.classList.add("gap");
+    } else {
+      header.classList.add(s);
+    }
+
+    const twisty = document.createElement("span");
+    twisty.className = "twisty";
+    twisty.textContent = hasBody ? "▶" : "";
+
+    const label = nodeLabel(node, side);
+
+    const num = document.createElement("span");
+    num.className = "num";
+    num.textContent = label.num;
+
+    const title = document.createElement("span");
+    title.className = "title";
+    title.title = label.title;
+    title.textContent = label.title;
+
+    const badge = document.createElement("span");
+    badge.className = "badge " + (s === "gap" ? "same" : s);
+    badge.style.display = (s === "gap" || s === "same") ? "none" : "inline-block";
+    badge.textContent = badgeText(s);
+
+    const mini = document.createElement("div");
+    mini.className = "mini-actions";
+
+    // Diff button (only when node exists and has match)
+    if(node && node._status === "changed" && node._match !== null){
+      const b = document.createElement("button");
+      b.className = "icon-btn";
+      b.type = "button";
+      b.textContent = "Diff";
+      b.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        if(side === "old"){
+          openNodeDiffModal(node, state.newFlat[node._match]);
+        } else {
+          openNodeDiffModal(state.oldFlat[node._match], node);
+        }
+      });
+      mini.appendChild(b);
+    }
+
+    header.appendChild(twisty);
+    header.appendChild(num);
+    header.appendChild(title);
+    header.appendChild(badge);
+    header.appendChild(mini);
+    return header;
+  }
+
+  function buildContent(node, side, otherNode){
+    const content = document.createElement("div");
+    content.className = "content";
+
+    // Status styling (helps see newly added/removed blocks immediately)
+    const st = node ? (node._status || "same") : "same";
+    if(st === "added") content.classList.add("content-added");
+    else if(st === "removed") content.classList.add("content-removed");
+    else if(st === "changed") content.classList.add("content-changed");
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span><b>Path:</b> ${escapeHtml(node.path)}</span>
+                      <span><b>Depth:</b> ${node.depth}</span>
+                      ${node.id ? `<span><b>ID:</b> <span style="font-family:var(--mono)">${escapeHtml(node.id)}</span></span>` : ""}`;
+    content.appendChild(meta);
+
+    const html = document.createElement("div");
+    html.className = "html";
+    if(node.displayHtml){
+      html.innerHTML = node.displayHtml;
+    } else {
+      html.innerHTML = `<span style="color:var(--muted)">(no HTML content)</span>`;
+    }
+    content.appendChild(html);
+
+    // Highlight added/removed words inside the STRUCTURE view (so you don't have to click Diff)
+    try{
+      applyStructureContentHighlights(html, side, node, otherNode);
+    }catch(_e){}
+
+    return content;
+  }
+
+  function renderPair(pair, depth, parentAlignId, oldParentEl, newParentEl){
+    const alignId = nextAlignId();
+    const o = pair.old || null;
+    const n = pair.new || null;
+
+    const hasBody = !!(
+      (o && o.displayHtml && o.displayHtml.trim()) ||
+      (n && n.displayHtml && n.displayHtml.trim()) ||
+      (pair.children && pair.children.length)
+    );
+
+    const oldWrap = document.createElement("div");
+    oldWrap.className = "tree-node";
+    const newWrap = document.createElement("div");
+    newWrap.className = "tree-node";
+
+    const oldHeader = buildHeader(o, "old", alignId, depth, hasBody);
+    const newHeader = buildHeader(n, "new", alignId, depth, hasBody);
+
+    const oldBody = document.createElement("div");
+    oldBody.className = "tree-body";
+    const newBody = document.createElement("div");
+    newBody.className = "tree-body";
+
+    oldWrap.appendChild(oldHeader);
+    oldWrap.appendChild(oldBody);
+    newWrap.appendChild(newHeader);
+    newWrap.appendChild(newBody);
+
+    if(hasBody){
+      oldHeader.addEventListener("click", ()=> toggleAlign(alignId));
+      newHeader.addEventListener("click", ()=> toggleAlign(alignId));
+    }
+
+    // Content (per node, no repeated footnote blocks)
+    if(o){
+      oldBody.appendChild(buildContent(o, "old", n));
+    }
+    if(n){
+      newBody.appendChild(buildContent(n, "new", o));
+    }
+
+    // Children
+    (pair.children || []).forEach(ch=>{
+      renderPair(ch, depth + 1, alignId, oldBody, newBody);
+    });
+
+    // Store for synced toggles + navigation
+    state.alignMap.set(alignId, {
+      parentId: parentAlignId,
+      depth,
+      oldHeader,
+      newHeader,
+      oldBody,
+      newBody,
+      oldTwisty: oldHeader.querySelector(".twisty"),
+      newTwisty: newHeader.querySelector(".twisty"),
+    });
+
+    // Track change navigation
+    if((o && o._status !== "same") || (n && n._status !== "same")){
+      state.changeList.push(alignId);
+    }
+
+    oldParentEl.appendChild(oldWrap);
+    newParentEl.appendChild(newWrap);
+  }
+
+  alignedRoots.forEach(p=> renderPair(p, 0, null, oldRoot, newRoot));
+
+  oldHost.appendChild(oldRoot);
+  newHost.appendChild(newRoot);
+
+  // Global footnotes at the end (instead of repeating in every TOC entry)
+  oldHost.appendChild(renderFootnotesSection(oldDoc, "old"));
+  newHost.appendChild(renderFootnotesSection(newDoc, "new"));
+
+  setupFootnoteLinking(oldHost, "old");
+  setupFootnoteLinking(newHost, "new");
+  setupScrollSync();
+
+  updateChangeNavPill();
+}
+
+/* ============================================================================
+   CONTENT BUILD (for GitHub-style diff)
+============================================================================ */
+function buildContentLines(docFlat, options){
+  const includeHeadings = !!options.includeHeadings;
+  const includeFootnotes = !!options.includeFootnotes;
+
+  function shortId(id){
+    const s = String(id || "");
+    if(!s) return "";
+    return s.length > 16 ? (s.slice(0,8) + "…" + s.slice(-4)) : s;
+  }
+
+  const lines = [];
+
+  docFlat.forEach(node=>{
+    const indent = "  ".repeat(Math.min(20, node.depth || 0));
+    const numTitle = `${node.num ? (node.num + " ") : ""}${node.title || "(untitled)"}`.trim();
+
+    if(includeHeadings){
+      const sid = shortId(node.id);
+      // Section heading + a stable anchor line (prevents cross-parent confusion in big docs)
+      lines.push(`${indent}▸ ${numTitle}${sid ? "  [" + sid + "]" : ""}`);
+      const anchor = node.id ? `id:${node.id}` : `key:${fallbackKey(node)}`;
+      lines.push(`${indent}  ${anchor}`);
+    }
+
+    // Content lines (readable, no XML tags)
+    if(node.textLines && node.textLines.length){
+      const contentIndent = includeHeadings ? (indent + "  ") : indent;
+      node.textLines.forEach(l=>{
+        lines.push(contentIndent + l);
+      });
+    }
+
+    lines.push(""); // section separator
+  });
+
+  // Global footnotes (once, at the end)
+  if(includeFootnotes){
+    const seen = new Set();
+    const footLines = [];
+    docFlat.forEach(node=>{
+      (node.footnotes || []).forEach(fn=>{
+        const fid = fn?.id || "";
+        if(!fid || seen.has(fid)) return;
+        seen.add(fid);
+        const txt = (fn.text || "").replace(/\s+/g," ").trim();
+        footLines.push(`[^${fid}]: ${txt}`);
+      });
+    });
+    if(footLines.length){
+      while(lines.length && lines[lines.length-1] === "") lines.pop();
+      lines.push("");
+      lines.push("Footnotes:");
+      lines.push(...footLines);
+      lines.push("");
+    }
+  }
+
+  while(lines.length && lines[lines.length-1] === "") lines.pop();
+  return lines;
+}
+
+
+
+/* ============================================================================
+   DIFF ENGINE (Myers) + inline token diff
+============================================================================ */
+function myersDiff(a, b){
+  // a,b arrays of lines
+  const N = a.length;
+  const M = b.length;
+  const max = N + M;
+  const size = 2 * max + 1;
+  const offset = max;
+
+  let vPrev = new Int32Array(size);
+  vPrev.fill(-1);
+  vPrev[offset + 1] = 0;
+
+  const trace = [];
+
+  for(let d=0; d<=max; d++){
+    const v = new Int32Array(size);
+    v.fill(-1);
+
+    for(let k=-d; k<=d; k+=2){
+      const kIndex = offset + k;
+      let x;
+      if(k === -d || (k !== d && vPrev[offset + k - 1] < vPrev[offset + k + 1])){
+        x = vPrev[offset + k + 1]; // insertion
+      } else {
+        x = vPrev[offset + k - 1] + 1; // deletion
+      }
+      if(x < 0) x = 0;
+      let y = x - k;
+
+      while(x < N && y < M && a[x] === b[y]){
+        x++; y++;
+      }
+      v[kIndex] = x;
+
+      if(x >= N && y >= M){
+        trace.push(v);
+        return backtrack(trace, a, b, offset);
+      }
+    }
+
+    trace.push(v);
+    vPrev = v;
+  }
+  return []; // should not happen
+}
+
+function backtrack(trace, a, b, offset){
+  let x = a.length;
+  let y = b.length;
+  const edits = [];
+
+  for(let d = trace.length - 1; d >= 0; d--){
+    const v = trace[d];
+    const k = x - y;
+    const kIndex = offset + k;
+
+    let prevK;
+    if(d === 0){
+      prevK = 0;
+    } else {
+      const vPrev = trace[d-1];
+      // Decide whether we came from k+1 (insertion) or k-1 (deletion)
+      if(k === -d || (k !== d && vPrev[offset + k - 1] < vPrev[offset + k + 1])){
+        prevK = k + 1;
+      } else {
+        prevK = k - 1;
+      }
+
+      const prevX = vPrev[offset + prevK];
+      const prevY = prevX - prevK;
+
+      while(x > prevX && y > prevY){
+        edits.unshift({op:"equal", a: a[x-1], b: b[y-1]});
+        x--; y--;
+      }
+
+      if(x === prevX){
+        // insertion
+        if(y > 0){
+          edits.unshift({op:"insert", b: b[y-1]});
+          y--;
+        }
+      } else {
+        // deletion
+        if(x > 0){
+          edits.unshift({op:"delete", a: a[x-1]});
+          x--;
+        }
+      }
+    }
+  }
+
+  // leading equals (if any)
+  while(x > 0 && y > 0){
+    edits.unshift({op:"equal", a: a[x-1], b: b[y-1]});
+    x--; y--;
+  }
+  while(x > 0){
+    edits.unshift({op:"delete", a: a[x-1]});
+    x--;
+  }
+  while(y > 0){
+    edits.unshift({op:"insert", b: b[y-1]});
+    y--;
+  }
+  return edits;
+}
+
+function groupEdits(edits){
+  const out = [];
+  for(let i=0; i<edits.length; ){
+    const e = edits[i];
+    if(e.op === "delete"){
+      const dels = [];
+      while(i<edits.length && edits[i].op === "delete"){ dels.push(edits[i].a); i++; }
+      const ins = [];
+      let j = i;
+      while(j<edits.length && edits[j].op === "insert"){ ins.push(edits[j].b); j++; }
+      if(ins.length){
+        out.push({op:"replace", dels, ins});
+        i = j;
+      } else {
+        dels.forEach(a=> out.push({op:"delete", a}));
+      }
+    } else if(e.op === "insert"){
+      out.push({op:"insert", b: e.b}); i++;
+    } else {
+      out.push({op:"equal", a: e.a}); i++;
+    }
+  }
+  return out;
+}
+
+function splitKeepSpaces(s){
+  // Tokens for inline diff: keep whitespace, words and punctuation separately.
+  // (Better than splitting only on whitespace — highlights small word/char edits more accurately.)
+  const str = String(s ?? "");
+  const re = /(\s+|[A-Za-z0-9]+|[^\sA-Za-z0-9]+)/g;
+  return str.match(re) || [];
+}
+
+function inlineCharDiff(oldSeg, newSeg){
+  const A = String(oldSeg ?? "").split("");
+  const B = String(newSeg ?? "").split("");
+  const m = A.length, n = B.length;
+
+  const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      dp[i][j] = (A[i-1] === B[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+
+  const ops = [];
+  let i=m, j=n;
+  while(i>0 || j>0){
+    if(i>0 && j>0 && A[i-1] === B[j-1]){
+      ops.unshift({t:"eq", v:A[i-1]}); i--; j--;
+    } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
+      ops.unshift({t:"add", v:B[j-1]}); j--;
+    } else {
+      ops.unshift({t:"del", v:A[i-1]}); i--;
+    }
+  }
+
+  let oldHtml="", newHtml="";
+  let delBuf="", addBuf="";
+
+  const flushDel = ()=>{
+    if(delBuf){
+      oldHtml += `<span class="inl-del">${escapeHtml(delBuf)}</span>`;
+      delBuf = "";
+    }
+  };
+  const flushAdd = ()=>{
+    if(addBuf){
+      newHtml += `<span class="inl-add">${escapeHtml(addBuf)}</span>`;
+      addBuf = "";
+    }
+  };
+  const flushBoth = ()=>{ flushDel(); flushAdd(); };
+
+  ops.forEach(o=>{
+    if(o.t === "eq"){
+      flushBoth();
+      const v = escapeHtml(o.v);
+      oldHtml += v; newHtml += v;
+    } else if(o.t === "del"){
+      flushAdd();
+      delBuf += o.v;
+    } else if(o.t === "add"){
+      flushDel();
+      addBuf += o.v;
+    }
+  });
+  flushBoth();
+
+  return {oldHtml, newHtml};
+}
+
+function inlineTokenDiff(oldLine, newLine){
+  const A = splitKeepSpaces(oldLine);
+  const B = splitKeepSpaces(newLine);
+
+  const m = A.length, n = B.length;
+  const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      dp[i][j] = (A[i-1] === B[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  const ops = [];
+  let i=m, j=n;
+  while(i>0 || j>0){
+    if(i>0 && j>0 && A[i-1] === B[j-1]){
+      ops.unshift({t:"eq", v:A[i-1]}); i--; j--;
+    } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
+      ops.unshift({t:"add", v:B[j-1]}); j--;
+    } else {
+      ops.unshift({t:"del", v:A[i-1]}); i--;
+    }
+  }
+
+  let oldHtml="", newHtml="";
+  for(let k=0;k<ops.length;k++){
+    const o = ops[k];
+
+    if(o.t === "eq"){
+      const v = escapeHtml(o.v);
+      oldHtml += v; newHtml += v;
+      continue;
+    }
+
+    // Char-level diff inside single-token replacements (better “content validation”)
+    if(o.t === "del" && k+1 < ops.length && ops[k+1].t === "add"){
+      const delTok = String(o.v ?? "");
+      const addTok = String(ops[k+1].v ?? "");
+      const delIsWs = /^\s+$/.test(delTok);
+      const addIsWs = /^\s+$/.test(addTok);
+
+      if(!delIsWs && !addIsWs && delTok.length <= 48 && addTok.length <= 48){
+        const cd = inlineCharDiff(delTok, addTok);
+        oldHtml += cd.oldHtml;
+        newHtml += cd.newHtml;
+        k++; // skip next token (the add)
+        continue;
+      }
+    }
+
+    if(o.t === "del"){
+      oldHtml += `<span class="inl-del">${escapeHtml(o.v)}</span>`;
+    } else if(o.t === "add"){
+      newHtml += `<span class="inl-add">${escapeHtml(o.v)}</span>`;
+    }
+  }
+
+  return {oldHtml, newHtml};
+}
+
+/* ============================================================================
+   STRUCTURE VIEW: INLINE CONTENT HIGHLIGHTING (adds/removals without clicking Diff)
+   - New-only words highlighted green
+   - Old-only words highlighted red
+   - Uses token-level Myers diff (word + punctuation + whitespace tokens)
+============================================================================ */
+function collectTextSpans(container){
+  const spans = [];
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+  let node;
+  let pos = 0;
+  while((node = walker.nextNode())){
+    const t = node.nodeValue || "";
+    spans.push({node, start: pos, end: pos + t.length});
+    pos += t.length;
+  }
+  const text = spans.map(s=>s.node.nodeValue || "").join("");
+  return {text, spans};
+}
+
+function tokenStartOffsets(tokens){
+  let pos = 0;
+  return tokens.map(t=>{ const s = pos; pos += (t || "").length; return s; });
+}
+
+function mergeRangesWhitespace(ranges, text){
+  if(!ranges || !ranges.length) return [];
+  const r = ranges.slice().sort((a,b)=>a[0]-b[0]);
+  const out = [r[0].slice()];
+
+  for(let i=1;i<r.length;i++){
+    const cur = r[i];
+    const last = out[out.length-1];
+
+    if(cur[0] <= last[1]){
+      last[1] = Math.max(last[1], cur[1]);
+      continue;
+    }
+
+    const gap = String(text || "").slice(last[1], cur[0]);
+    if(gap && gap.trim() === ""){
+      // only whitespace between -> merge into one readable highlight block
+      last[1] = cur[1];
+    } else {
+      out.push(cur.slice());
+    }
+  }
+  return out;
+}
+
+function computeTokenDiffRanges(oldText, newText){
+  const oldTokens = splitKeepSpaces(oldText);
+  const newTokens = splitKeepSpaces(newText);
+
+  const edits = myersDiff(oldTokens, newTokens);
+  const oldStarts = tokenStartOffsets(oldTokens);
+  const newStarts = tokenStartOffsets(newTokens);
+
+  let i=0, j=0;
+  const adds = [];
+  const dels = [];
+
+  edits.forEach(e=>{
+    if(e.op === "equal"){
+      i++; j++;
+      return;
+    }
+    if(e.op === "delete"){
+      const tok = oldTokens[i] || "";
+      if(tok && !/^\s+$/.test(tok)){
+        const s = oldStarts[i];
+        dels.push([s, s + tok.length]);
+      }
+      i++;
+      return;
+    }
+    if(e.op === "insert"){
+      const tok = newTokens[j] || "";
+      if(tok && !/^\s+$/.test(tok)){
+        const s = newStarts[j];
+        adds.push([s, s + tok.length]);
+      }
+      j++;
+      return;
+    }
+  });
+
+  return {adds, dels};
+}
+
+function applyHighlightRanges(spans, ranges, className){
+  if(!ranges || !ranges.length) return;
+  const sorted = ranges.slice().sort((a,b)=>a[0]-b[0]);
+
+  // Process from end so original offsets remain valid for each text node
+  for(let si=spans.length-1; si>=0; si--){
+    const {node, start, end} = spans[si];
+    if(!node || !node.parentNode) continue;
+
+    // Collect overlaps (ranges are sorted)
+    const local = [];
+    for(let ri=0; ri<sorted.length; ri++){
+      const r = sorted[ri];
+      if(r[1] <= start) continue;
+      if(r[0] >= end) break;
+
+      const ls = Math.max(r[0], start) - start;
+      const le = Math.min(r[1], end) - start;
+      if(le > ls) local.push([ls, le]);
+    }
+    if(!local.length) continue;
+
+    const t = node.nodeValue || "";
+    const frag = document.createDocumentFragment();
+    let cursor = 0;
+
+    local.sort((a,b)=>a[0]-b[0]);
+    local.forEach(([ls, le])=>{
+      if(ls > cursor) frag.appendChild(document.createTextNode(t.slice(cursor, ls)));
+      const sp = document.createElement("span");
+      sp.className = className;
+      sp.textContent = t.slice(ls, le);
+      frag.appendChild(sp);
+      cursor = le;
+    });
+    if(cursor < t.length) frag.appendChild(document.createTextNode(t.slice(cursor)));
+
+    node.parentNode.replaceChild(frag, node);
+  }
+}
+
+function highlightAllText(container, className){
+  const {spans} = collectTextSpans(container);
+  for(let si=spans.length-1; si>=0; si--){
+    const {node} = spans[si];
+    if(!node || !node.parentNode) continue;
+    const t = node.nodeValue || "";
+    if(!t.trim()) continue;
+    const sp = document.createElement("span");
+    sp.className = className;
+    sp.textContent = t;
+    node.parentNode.replaceChild(sp, node);
+  }
+}
+
+function applyStructureContentHighlights(htmlEl, side, node, otherNode){
+  if(!htmlEl || !node) return;
+  const st = node._status || "same";
+  if(st === "same") return;
+
+  // Added / Removed blocks: make them clearly visible immediately
+  if(st === "added"){
+    if(side === "new") highlightAllText(htmlEl, "hl-add");
+    return;
+  }
+  if(st === "removed"){
+    if(side === "old") highlightAllText(htmlEl, "hl-del");
+    return;
+  }
+
+  // Changed: highlight token insertions (new) and deletions (old)
+  if(st === "changed" && otherNode){
+    const thisData = collectTextSpans(htmlEl);
+    const tmp = document.createElement("div");
+    tmp.innerHTML = otherNode.displayHtml || "";
+    const otherData = collectTextSpans(tmp);
+
+    const oldText = (side === "new") ? otherData.text : thisData.text;
+    const newText = (side === "new") ? thisData.text : otherData.text;
+
+    const {adds, dels} = computeTokenDiffRanges(oldText, newText);
+
+    if(side === "new"){
+      const mergedAdds = mergeRangesWhitespace(adds, newText);
+      applyHighlightRanges(thisData.spans, mergedAdds, "hl-add");
+    } else if(side === "old"){
+      const mergedDels = mergeRangesWhitespace(dels, oldText);
+      applyHighlightRanges(thisData.spans, mergedDels, "hl-del");
+    }
+  }
+}
+
+function renderSplitDiff(oldLines, newLines, options){
+  const edits = myersDiff(oldLines, newLines);
+  const grouped = groupEdits(edits);
+
+  // Optional compact mode: show only changes + N lines of context
+  const context = options.compact ? 3 : 1e9;
+
+  let rows = [];
+  if(options.compact){
+    // Build index of changed rows in grouped
+    const changedIdx = [];
+    grouped.forEach((g, idx)=>{
+      if(g.op !== "equal") changedIdx.push(idx);
+    });
+    if(changedIdx.length === 0){
+      changedIdx.push(0);
+    }
+    const keep = new Set();
+    changedIdx.forEach(i=>{
+      for(let k=Math.max(0,i-context); k<=Math.min(grouped.length-1, i+context); k++){
+        keep.add(k);
+      }
+    });
+
+    // Render with hunks
+    let lastKept = -1;
+    for(let i=0;i<grouped.length;i++){
+      if(!keep.has(i)) continue;
+      if(lastKept !== -1 && i > lastKept + 1){
+        rows.push({hunk: true, text: `… ${i - lastKept - 1} unchanged lines …`});
+      }
+      rows.push(grouped[i]);
+      lastKept = i;
+    }
+  } else {
+    rows = grouped;
+  }
+
+  let lnA = 1, lnB = 1;
+  let html = `<table class="diff-table">`;
+  rows.forEach(r=>{
+    if(r.hunk){
+      html += `<tr><td colspan="4" class="hunk">${escapeHtml(r.text)}</td></tr>`;
+      return;
+    }
+    if(r.op === "equal"){
+      html += `<tr class="row-eq">
+        <td class="dln">${lnA++}</td><td class="dcode left">${escapeHtml(r.a)}</td>
+        <td class="dln">${lnB++}</td><td class="dcode right">${escapeHtml(r.a)}</td>
+      </tr>`;
+    } else if(r.op === "delete"){
+      html += `<tr class="row-del">
+        <td class="dln">${lnA++}</td><td class="dcode left">${escapeHtml(r.a)}</td>
+        <td class="dln"></td><td class="dcode right"></td>
+      </tr>`;
+    } else if(r.op === "insert"){
+      html += `<tr class="row-add">
+        <td class="dln"></td><td class="dcode left"></td>
+        <td class="dln">${lnB++}</td><td class="dcode right">${escapeHtml(r.b)}</td>
+      </tr>`;
+    } else if(r.op === "replace"){
+      const max = Math.max(r.dels.length, r.ins.length);
+      for(let i=0;i<max;i++){
+        const aLine = r.dels[i] ?? "";
+        const bLine = r.ins[i] ?? "";
+        let left = escapeHtml(aLine);
+        let right = escapeHtml(bLine);
+        if(aLine && bLine){
+          const inl = inlineTokenDiff(aLine, bLine);
+          left = inl.oldHtml;
+          right = inl.newHtml;
+        }
+        html += `<tr class="row-repl">
+          <td class="dln">${aLine ? lnA++ : ""}</td><td class="dcode left">${aLine ? left : ""}</td>
+          <td class="dln">${bLine ? lnB++ : ""}</td><td class="dcode right">${bLine ? right : ""}</td>
+        </tr>`;
+      }
+    }
+  });
+  html += `</table>`;
+  return html;
+}
+
+/* ============================================================================
+   VALIDATION (GitHub-like checks)
+============================================================================ */
+function severityRank(sev){
+  return sev === "error" ? 2 : sev === "warn" ? 1 : 0;
+}
+
+function validateDoc(docInfo, label){
+  const issues = [];
+
+  // 1) Duplicate level ids
+  const levelIdCounts = new Map();
+  docInfo.flat.forEach(n=>{
+    if(!n.id) return;
+    levelIdCounts.set(n.id, (levelIdCounts.get(n.id) || 0) + 1);
+  });
+  levelIdCounts.forEach((count, id)=>{
+    if(count > 1){
+      issues.push({severity:"error", code:"DUP_LEVEL_ID", message:`Duplicate <level id> found: ${id} (x${count})`, location:`${label}`, path:id});
+    }
+  });
+
+  // 2) Duplicate footnote ids (global)
+  docInfo.footnotesById.forEach((arr, fid)=>{
+    if(arr.length > 1){
+      issues.push({severity:"warn", code:"DUP_FOOTNOTE_ID", message:`Footnote id "${fid}" defined ${arr.length} times`, location:`${label}`, path: arr[0]?.path || ""});
+    }
+  });
+
+  // 3) Missing footnote targets
+  const defined = new Set([...docInfo.footnotesById.keys()]);
+  docInfo.footnoteRefs.forEach(r=>{
+    if(!defined.has(r.fid)){
+      issues.push({severity:"error", code:"MISSING_FOOTNOTE", message:`Footnote reference [${r.fid}] has no matching <footnote id="${r.fid}">`, location:`${label}`, path: r.path});
+    }
+  });
+
+  // 4) Orphan footnotes (defined but never referenced)
+  const referenced = new Set(docInfo.footnoteRefs.map(r=>r.fid));
+  defined.forEach(fid=>{
+    if(!referenced.has(fid)){
+      // warn only, because some docs have footnotes not referenced in extracted content
+      const loc = docInfo.footnotesById.get(fid)?.[0]?.path || "";
+      issues.push({severity:"warn", code:"ORPHAN_FOOTNOTE", message:`Footnote "${fid}" is defined but not referenced`, location:`${label}`, path: loc});
+    }
+  });
+
+  // 5) Missing titles
+  docInfo.flat.forEach(n=>{
+    if(!n.title || !n.title.trim()){
+      issues.push({severity:"warn", code:"MISSING_TITLE", message:`A level is missing a <title>`, location:`${label}`, path: n.path});
+    }
+  });
+
+  // 6) Image src missing
+  docInfo.imageSrcs.forEach(img=>{
+    if(!img.src || !img.src.trim()){
+      issues.push({severity:"warn", code:"IMG_NO_SRC", message:`<img> missing src`, location:`${label}`, path: img.path});
+    }
+  });
+
+  return issues;
+}
+
+function validateComparison(oldDoc, newDoc, matchInfo){
+  const issues = [];
+  const oldMatch = matchInfo.match;
+
+  // Example comparison checks:
+  // - Same title but moved depth (structure change)
+  oldDoc.flat.forEach((o, oi)=>{
+    const ni = oldMatch.get(oi);
+    if(ni === undefined) return;
+    const n = newDoc.flat[ni];
+    if(o.depth !== n.depth){
+      issues.push({severity:"warn", code:"DEPTH_CHANGED", message:`Node depth changed (${o.depth} → ${n.depth}) for "${o.title}"`, location:"comparison", path:o.path});
+    }
+  });
+
+  // - Huge content change (very low similarity) (warn)
+  oldDoc.flat.forEach((o, oi)=>{
+    const ni = oldMatch.get(oi);
+    if(ni === undefined) return;
+    const n = newDoc.flat[ni];
+    const a = (o.textLines.join(" ") + " " + o.footnoteLines.join(" ")).trim();
+    const b = (n.textLines.join(" ") + " " + n.footnoteLines.join(" ")).trim();
+    if(!a || !b) return;
+    const sim = jaccardSimilarity(tokenizeWords(a), tokenizeWords(b));
+    if(sim < 0.2){
+      issues.push({severity:"warn", code:"LOW_SIMILARITY", message:`Large content change (similarity ~${(sim*100).toFixed(0)}%) in "${o.title}"`, location:"comparison", path:o.path});
+    }
+  });
+
+  return issues;
+}
+
+function tokenizeWords(s){
+  return (s.toLowerCase().match(/[a-z0-9]+/g) || []);
+}
+function jaccardSimilarity(tokensA, tokensB){
+  const A = new Set(tokensA);
+  const B = new Set(tokensB);
+  if(A.size === 0 && B.size === 0) return 1;
+  const inter = [...A].filter(x=>B.has(x)).length;
+  const union = new Set([...A, ...B]).size;
+  return union ? inter/union : 0;
+}
+
+function summarizeIssues(issues){
+  const errors = issues.filter(i=>i.severity==="error").length;
+  const warns = issues.filter(i=>i.severity==="warn").length;
+  const level = errors ? "FAIL" : warns ? "WARN" : "PASS";
+  return {errors, warns, level};
+}
+
+/* ============================================================================
+   MODAL (node diff)
+============================================================================ */
+function openNodeDiffModal(oldNode, newNode){
+  // oldNode is from side; newNode is the matched node from other doc
+  const title = `${oldNode.num ? oldNode.num + " " : ""}${oldNode.title || "(untitled)"} — content diff`;
+  $("modalTitle").textContent = title;
+
+  // Diff lines only (no headings), but include footnotes (same toggles as main diff)
+  const aLines = [...(oldNode.textLines||[])];
+  const bLines = [...(newNode.textLines||[])];
+
+  // include footnotes always for node diff
+  if(oldNode.footnoteLines?.length || newNode.footnoteLines?.length){
+    aLines.push(""); aLines.push("Footnotes:"); aLines.push(...(oldNode.footnoteLines||[]));
+    bLines.push(""); bLines.push("Footnotes:"); bLines.push(...(newNode.footnoteLines||[]));
+  }
+
+  const html = `<div class="diff-wrap" style="border:none; box-shadow:none;">
+    <div class="diff-toolbar"><div class="left"><span class="pill">Node split diff</span></div></div>
+    ${renderSplitDiff(aLines, bLines, {compact:false})}
+  </div>`;
+
+  $("modalBody").innerHTML = html;
+  $("modalBackdrop").classList.add("show");
+  $("modalBackdrop").setAttribute("aria-hidden","false");
+}
+
+$("modalClose").addEventListener("click", ()=>{
+  $("modalBackdrop").classList.remove("show");
+  $("modalBackdrop").setAttribute("aria-hidden","true");
+});
+$("modalBackdrop").addEventListener("click", (e)=>{
+  if(e.target === $("modalBackdrop")) $("modalClose").click();
+});
+
+/* ============================================================================
+   RESULTS: Source preview
+============================================================================ */
+function ensureSourcePanel(){
+  const grid = $("treeGrid");
+  if(!grid.classList.contains("three")){
+    grid.classList.add("three");
+  }
+  if(!$("sourcePanel")){
+    const panel = document.createElement("div");
+    panel.className = "panel";
+    panel.id = "sourcePanel";
+    panel.innerHTML = `<div class="ph src">Source (View‑only)</div><div class="pc" id="sourcePanelBody"><div class="source-note">Upload a PDF / image / text file to preview here.</div></div>`;
+    grid.appendChild(panel);
+  }
+}
+
+function renderSourcePreview(file){
+  const host = $("sourcePanelBody");
+  if(!host) return;
+
+  const name = (file.name || "").toLowerCase();
+  const type = file.type || "";
+
+  const url = URL.createObjectURL(file);
+
+  if(type === "application/pdf" || name.endsWith(".pdf")){
+    host.innerHTML = `<iframe class="source-frame" src="${url}"></iframe>`;
+  } else if(type.startsWith("image/")){
+    host.innerHTML = `<img src="${url}" style="max-width:100%; height:auto; border-radius:12px; border:1px solid var(--border);">`;
+  } else if(type.startsWith("text/") || name.endsWith(".txt") || name.endsWith(".xml") || name.endsWith(".html") || name.endsWith(".htm") || name.endsWith(".json")){
+    file.text().then(t=>{
+      host.innerHTML = `<div class="source-text">${escapeHtml(t)}</div>`;
+    }).catch(()=>{
+      host.innerHTML = `<div class="source-note">Could not preview this text file.</div>`;
+    });
+  } else {
+    host.innerHTML = `<div class="source-note">
+      Preview for <b>${escapeHtml(file.name)}</b> is not supported in-browser.<br/>
+      You can still open it locally: <a href="${url}" target="_blank" rel="noopener">Open in new tab ↗</a>
+    </div>`;
+  }
+}
+
+/* ============================================================================
+   DOWNLOADS
+============================================================================ */
+function downloadText(filename, text){
+  const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+}
+
+function buildReportHtml(){
+  const now = new Date().toISOString();
+  const summary = $("summaryPill").textContent;
+  const issues = state.issues.map(i=>`${i.severity.toUpperCase()}\\t${i.code}\\t${i.message}\\t${i.location}\\t${i.path || ""}`).join("\\n");
+  const diff = state.lastUnifiedDiff || "";
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>XML QA Report</title></head><body style="font-family:Arial,sans-serif;">
+  <h2>XML QA Report</h2>
+  <div><b>Generated:</b> ${escapeHtml(now)}</div>
+  <div><b>Summary:</b> ${escapeHtml(summary)}</div>
+  <hr/>
+  <h3>Validation Issues</h3>
+  <pre>${escapeHtml(issues || "No issues")}</pre>
+  <hr/>
+  <h3>Unified Content Diff</h3>
+  <pre>${escapeHtml(diff || "No diff generated")}</pre>
+  </body></html>`;
+}
+
+function buildUnifiedDiff(oldLines, newLines){
+  // Simple unified diff from grouped edits (not full git format, but readable)
+  const edits = groupEdits(myersDiff(oldLines, newLines));
+  let out = [];
+  out.push("--- old");
+  out.push("+++ new");
+  edits.forEach(e=>{
+    if(e.op === "equal"){
+      out.push(" " + e.a);
+    } else if(e.op === "delete"){
+      out.push("-" + e.a);
+    } else if(e.op === "insert"){
+      out.push("+" + e.b);
+    } else if(e.op === "replace"){
+      e.dels.forEach(l=> out.push("-" + l));
+      e.ins.forEach(l=> out.push("+" + l));
+    }
+  });
+  return out.join("\\n");
+}
+
+/* ============================================================================
+   MAIN COMPARE
+============================================================================ */
+$("compareBtn").addEventListener("click", ()=>{
+  try{
+    // Parse both docs
+    const oldDoc = parseDoc(state.oldText);
+    const newDoc = parseDoc(state.newText);
+    state.oldDoc = oldDoc;
+    state.newDoc = newDoc;
+    state.oldFlat = oldDoc.flat;
+    state.newFlat = newDoc.flat;
+    state.oldTree = oldDoc.tree;
+    state.newTree = newDoc.tree;
+
+    // Match + statuses
+    const matchInfo = matchDocs(oldDoc.flat, newDoc.flat);
+    state.match = matchInfo.match;
+    state.changesCount = computeStatuses(oldDoc, newDoc, matchInfo);
+
+    // Render aligned tree panels (TOC gap filling + synced expand/scroll)
+    renderAlignedTrees(oldDoc, newDoc);
+
+    // Source panel
+    if(state.srcFile){
+      ensureSourcePanel();
+      renderSourcePreview(state.srcFile);
+    } else {
+      // Keep grid as 2 panels unless source is uploaded later
+      $("treeGrid").classList.remove("three");
+      const sp = $("sourcePanel");
+      if(sp) sp.remove();
+    }
+
+    // Validation
+    const issues = [
+      ...validateDoc(oldDoc, "old"),
+      ...validateDoc(newDoc, "new"),
+      ...validateComparison(oldDoc, newDoc, matchInfo),
+    ];
+    // Sort by severity then code
+    issues.sort((a,b)=> severityRank(b.severity) - severityRank(a.severity) || (a.code||"").localeCompare(b.code||""));
+    state.issues = issues;
+
+    const summary = summarizeIssues(issues);
+    state.validationSummary = summary;
+
+    // Update pills
+    $("summaryPill").textContent = "Compared";
+    $("changeCountsPill").textContent = "Changes: " + state.changesCount;
+
+    const vPill = $("validationPill");
+    vPill.textContent = `Checks: ${summary.level} (${summary.errors} err, ${summary.warns} warn)`;
+    vPill.classList.remove("ok","warn","err");
+    vPill.classList.add(summary.level === "PASS" ? "ok" : summary.level === "WARN" ? "warn" : "err");
+
+    const sumPill = $("summaryPill");
+    sumPill.classList.remove("ok","warn","err");
+    sumPill.classList.add(summary.level === "PASS" ? "ok" : summary.level === "WARN" ? "warn" : "err");
+
+    // Show results view
+    $("uploadCard").style.display = "none";
+    $("resultsCard").style.display = "block";
+    $("topbar").classList.add("active");
+    $("tabs").classList.add("active");
+
+    // Build default diff
+    rebuildMainDiff();
+
+    // Render validation tab content
+    renderValidationTab();
+
+  }catch(err){
+    alert("Error: " + (err?.message || err));
+    console.error(err);
+  }
+});
+
+function rebuildMainDiff(){
+  const compact = $("compactToggle").checked;
+  const includeHeadings = $("headingsToggle").checked;
+  const includeFootnotes = $("footnotesToggle").checked;
+
+  const oldLines = buildContentLines(state.oldFlat, {includeHeadings, includeFootnotes});
+  const newLines = buildContentLines(state.newFlat, {includeHeadings, includeFootnotes});
+
+  // Build unified for download
+  state.lastUnifiedDiff = buildUnifiedDiff(oldLines, newLines);
+
+  const html = renderSplitDiff(oldLines, newLines, {compact});
+  $("diffHost").innerHTML = html;
+}
+
+$("rebuildDiffBtn").addEventListener("click", rebuildMainDiff);
+
+function renderValidationTab(){
+  const issues = state.issues || [];
+  const sum = summarizeIssues(issues);
+
+  // Partition by location
+  const oldIssues = issues.filter(i=>i.location==="old");
+  const newIssues = issues.filter(i=>i.location==="new");
+  const cmpIssues = issues.filter(i=>i.location==="comparison");
+
+  const sumOld = summarizeIssues(oldIssues);
+  const sumNew = summarizeIssues(newIssues);
+  const sumCmp = summarizeIssues(cmpIssues);
+
+  function cardHtml(title, s, list){
+    const pillClass = s.level === "PASS" ? "ok" : s.level === "WARN" ? "warn" : "err";
+    return `<div class="check-card">
+      <h3>${escapeHtml(title)} <span class="pill ${pillClass}" style="margin-left:8px">${s.level}</span></h3>
+      <div class="sum">${s.errors} errors · ${s.warns} warnings · ${list.length} total issues</div>
+      <div style="margin-top:10px; font-size:12px; color:var(--muted); line-height:1.45">
+        ${list.slice(0,4).map(i=>`• <span class="issue-code">${escapeHtml(i.code)}</span> — ${escapeHtml(i.message)}`).join("<br/>") || "No issues"}
+        ${list.length>4 ? `<br/><span style="opacity:.9">… and ${list.length-4} more</span>` : ""}
+      </div>
+    </div>`;
+  }
+
+  $("validationSummary").innerHTML =
+    cardHtml("Old XML checks", sumOld, oldIssues) +
+    cardHtml("New XML checks", sumNew, newIssues) +
+    cardHtml("Comparison checks", sumCmp, cmpIssues);
+
+  const table = $("issueTable");
+  const tbody = $("issueTbody");
+  tbody.innerHTML = "";
+
+  if(issues.length){
+    table.style.display = "table";
+    issues.forEach(i=>{
+      const tr = document.createElement("tr");
+      const tag = document.createElement("td");
+      tag.innerHTML = `<span class="issue-tag ${i.severity === "error" ? "err" : i.severity === "warn" ? "warn" : "ok"}">${i.severity.toUpperCase()}</span>`;
+      const code = document.createElement("td");
+      code.innerHTML = `<span class="issue-code">${escapeHtml(i.code)}</span>`;
+      const msg = document.createElement("td");
+      msg.textContent = i.message;
+      const loc = document.createElement("td");
+      loc.innerHTML = `<div class="issue-loc">${escapeHtml(i.location)}${i.path ? " · " + escapeHtml(i.path) : ""}</div>`;
+      tr.appendChild(tag); tr.appendChild(code); tr.appendChild(msg); tr.appendChild(loc);
+      tbody.appendChild(tr);
+    });
+  } else {
+    table.style.display = "none";
+  }
+}
+
+/* ============================================================================
+   Tabs + controls
+============================================================================ */
+$("backBtn").addEventListener("click", ()=>{
+  // reset to upload view
+  $("resultsCard").style.display = "none";
+  $("uploadCard").style.display = "block";
+});
+
+$("expandAllBtn").addEventListener("click", ()=>{
+  // Expand in both Old + New (synced)
+  if(!state.alignMap) return;
+  state.alignMap.forEach((_, id)=> setAlignOpen(id, true));
+});
+
+$("collapseAllBtn").addEventListener("click", ()=>{
+  // Collapse in both Old + New (synced)
+  if(!state.alignMap) return;
+  state.alignMap.forEach((_, id)=> setAlignOpen(id, false));
+});
+
+$("expandChangedBtn").addEventListener("click", ()=>{
+  // Collapse everything, then expand only changed nodes (synced)
+  if(!state.alignMap) return;
+  state.alignMap.forEach((_, id)=> setAlignOpen(id, false));
+  (state.changeList || []).forEach(id=>{
+    openAncestors(id);
+    setAlignOpen(id, true);
+  });
+});
+
+$("nextChangeBtn").addEventListener("click", ()=>{
+  navigateToChange(true);
+});
+
+
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    const tab = t.dataset.tab;
+
+    // show matching panel
+    ["tree","diff","validation"].forEach(name=>{
+      const el = $("tab-" + name);
+      if(el) el.classList.toggle("active", name === tab);
+    });
+
+    // lazy render validation when opened
+    if(tab === "validation"){
+      renderValidationTab();
+    }
+  });
+});
+
+/* ============================================================================
+   Downloads (removed)
+============================================================================ */
+
+</script>
+</body>
+</html>
