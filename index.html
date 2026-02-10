@@ -31,12 +31,11 @@ body{
   color: var(--text);
 }
 
-header { 
-  background: linear-gradient(135deg, #130909 0%, #6366f1 50%, #a855f7 100%); 
-  color: #fff; 
-  padding: 18px 16px; 
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); 
-  border-bottom: 3px solid #06b6d4;
+header{
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 55%, #a855f7 100%);
+  color:#fff;
+  padding:18px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
 }
 header h1{margin:0;font-size:18px;letter-spacing:.2px}
 header .sub{opacity:.9;margin-top:4px;font-size:12px}
@@ -610,6 +609,14 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
   line-height:1.4;
   margin-bottom: 8px;
 }
+.gh-loading{
+  padding: 10px 12px;
+  border:1px dashed var(--border);
+  border-radius:12px;
+  background:#fff;
+  color: var(--muted);
+  font-size:12px;
+}
 .diff-toolbar .select{
   border:1px solid var(--border);
   background:#fff;
@@ -634,8 +641,8 @@ header .sub{opacity:.9;margin-top:4px;font-size:12px}
 <body>
 <header>
   <img src="https://regtransform.gocube.global/static/media/logo_new.28da31ab.png" alt="CUBE Logo" style="height: 32px; margin-right: 12px; vertical-align: middle;">
-  <h1>CUBE - PDF QA XML Tool - 7</h1>
-  <div class="sub">Structure view with inline GitHub‑style highlights + synced navigation — WEB APP</div>
+  <h1>CUBE - PDF QA XML Tool - </h1>
+  <div class="sub">Structure view with inline GitHub‑style highlights + synced navigation — Web App</div>
 </header>
 
 <div class="wrapper">
@@ -799,6 +806,11 @@ function escapeHtml(s){
   d.textContent = s ?? "";
   return d.innerHTML;
 }
+function pushAll(dst, src){
+  if(!src || !src.length) return;
+  for(let i=0;i<src.length;i++) dst.push(src[i]);
+}
+
 function normalize(s){
   return (s ?? "").replace(/\\s+/g," ").trim().toLowerCase();
 }
@@ -824,6 +836,7 @@ $("oldFile").addEventListener("change", async (e)=>{
   if(!f) return;
   state.oldFile = f;
   state.oldText = await f.text();
+  resetGhCache();
   $("oldInfo").textContent = "✓ " + f.name;
   $("oldBox").classList.add("has-file");
   refreshCompareEnabled();
@@ -834,6 +847,7 @@ $("newFile").addEventListener("change", async (e)=>{
   if(!f) return;
   state.newFile = f;
   state.newText = await f.text();
+  resetGhCache();
   $("newInfo").textContent = "✓ " + f.name;
   $("newBox").classList.add("has-file");
   // Auto-copy new -> old if old missing (keeps your previous behavior but safer)
@@ -945,15 +959,15 @@ function sanitizeHtml(html){
 }
 
 function replaceFootnoteRefs(container){
-  // Replace <footnoteref fid="x"/> with a visible marker
+  // Replace <footnoteref fid="x"/> with a visible, *stable* marker.
+  // We keep the real fid in data-fid for linking, but the rendered label is always [fn]
+  // so that UUID-only changes don't look like content changes.
   container.querySelectorAll("footnoteref").forEach(el=>{
     const fid = el.getAttribute("fid") || el.getAttribute("id") || "?";
     const sup = document.createElement("sup");
     sup.className = "fnref";
-    // Short label for readability, full id in tooltip + data-fid
-    const short = (fid.length > 16) ? (fid.slice(0,8) + "…" + fid.slice(-4)) : fid;
-    sup.textContent = "[" + short + "]";
-    sup.title = fid;
+    sup.textContent = "[fn]";
+    sup.title = "Footnote";
     sup.setAttribute("data-fid", fid);
     sup.style.cursor = "pointer";
     el.replaceWith(sup);
@@ -977,9 +991,11 @@ function extractTextLinesFromXmlNode(node, lines, ctx){
   const tag = node.tagName.toLowerCase();
 
   if(tag === "footnoteref"){
-    const fid = node.getAttribute("fid") || "?";
-    if(lines.length === 0) lines.push("[" + fid + "]");
-    else lines[lines.length-1] += " [" + fid + "]";
+    // For diff/content extraction we use a stable marker.
+    // (The real fid is still available in the HTML view via data-fid.)
+    const marker = "[fn]";
+    if(lines.length === 0) lines.push(marker);
+    else lines[lines.length-1] += " " + marker;
     return;
   }
 
@@ -1120,7 +1136,7 @@ function parseDoc(xmlText){
       });
 
     // Footnotes lines (always include for diff; user can toggle)
-    const footnoteLines = footnotes.map(fn => `[^${fn.id}]: ${fn.text}`);
+    const footnoteLines = footnotes.map(fn => `Footnote: ${fn.text}`);
 
     const node = {
       id, num, title, depth, path,
@@ -1699,12 +1715,6 @@ function buildContentLines(docFlat, options){
   const includeHeadings = !!options.includeHeadings;
   const includeFootnotes = !!options.includeFootnotes;
 
-  function shortId(id){
-    const s = String(id || "");
-    if(!s) return "";
-    return s.length > 16 ? (s.slice(0,8) + "…" + s.slice(-4)) : s;
-  }
-
   const lines = [];
 
   docFlat.forEach(node=>{
@@ -1712,11 +1722,9 @@ function buildContentLines(docFlat, options){
     const numTitle = `${node.num ? (node.num + " ") : ""}${node.title || "(untitled)"}`.trim();
 
     if(includeHeadings){
-      const sid = shortId(node.id);
-      // Section heading + a stable anchor line (prevents cross-parent confusion in big docs)
-      lines.push(`${indent}▸ ${numTitle}${sid ? "  [" + sid + "]" : ""}`);
-      const anchor = node.id ? `id:${node.id}` : `key:${fallbackKey(node)}`;
-      lines.push(`${indent}  ${anchor}`);
+      // Section heading + stable anchor (non-ID) to prevent cross-parent confusion
+      lines.push(`${indent}▸ ${numTitle}`);
+      lines.push(`${indent}  key:${fallbackKey(node)}`);
     }
 
     // Content lines (readable, no XML tags)
@@ -1740,14 +1748,14 @@ function buildContentLines(docFlat, options){
         if(!fid || seen.has(fid)) return;
         seen.add(fid);
         const txt = (fn.text || "").replace(/\s+/g," ").trim();
-        footLines.push(`[^${fid}]: ${txt}`);
+        footLines.push(`Footnote: ${txt}`);
       });
     });
     if(footLines.length){
       while(lines.length && lines[lines.length-1] === "") lines.pop();
       lines.push("");
       lines.push("Footnotes:");
-      lines.push(...footLines);
+      pushAll(lines, footLines);
       lines.push("");
     }
   }
@@ -1869,6 +1877,188 @@ function backtrack(trace, a, b, offset){
   return edits;
 }
 
+/* ============================================================================
+   LARGE FILE SAFE LINE DIFF (Patience + bounded Myers)
+   - Prevents freezes on very large XML / content by avoiding huge Myers traces.
+   - Uses Patience anchors (unique lines) to split into smaller chunks, then Myers on chunks.
+============================================================================ */
+const DIFF_LIMITS = {
+  // If total lines are small enough, run Myers directly
+  MAX_TOTAL_MYERS: 30000,
+  // Maximum chunk sizes for Myers inside Patience recursion
+  MAX_SEGMENT_MYERS: 4000,
+  // Safety limit: if a segment remains huge with no anchors, fall back to replace-all
+  MAX_REPLACE_FALLBACK: 20000,
+  // Recursion safety
+  MAX_DEPTH: 50
+};
+
+function diffLinesAdaptive(aLines, bLines){
+  const a = aLines || [];
+  const b = bLines || [];
+  const total = a.length + b.length;
+
+  if(total <= DIFF_LIMITS.MAX_TOTAL_MYERS){
+    return myersDiff(a, b);
+  }
+  return patienceDiff(a, b);
+}
+
+function patienceDiff(a, b){
+  return patienceDiffRange(a, 0, a.length, b, 0, b.length, 0);
+}
+
+function patienceDiffRange(a, a0, a1, b, b0, b1, depth){
+  // Base cases
+  if(a0 >= a1){
+    const out = [];
+    for(let j=b0;j<b1;j++) out.push({op:"insert", b:b[j]});
+    return out;
+  }
+  if(b0 >= b1){
+    const out = [];
+    for(let i=a0;i<a1;i++) out.push({op:"delete", a:a[i]});
+    return out;
+  }
+
+  if(depth > DIFF_LIMITS.MAX_DEPTH){
+    // Safety: avoid pathological recursion
+    const out = [];
+    for(let i=a0;i<a1;i++) out.push({op:"delete", a:a[i]});
+    for(let j=b0;j<b1;j++) out.push({op:"insert", b:b[j]});
+    return out;
+  }
+
+  // Trim common prefix
+  const head = [];
+  while(a0 < a1 && b0 < b1 && a[a0] === b[b0]){
+    head.push({op:"equal", a:a[a0], b:b[b0]});
+    a0++; b0++;
+  }
+  // Trim common suffix
+  const tail = [];
+  while(a1 > a0 && b1 > b0 && a[a1-1] === b[b1-1]){
+    tail.unshift({op:"equal", a:a[a1-1], b:b[b1-1]});
+    a1--; b1--;
+  }
+
+  if(a0 >= a1){
+    const mid = [];
+    for(let j=b0;j<b1;j++) mid.push({op:"insert", b:b[j]});
+    return head.concat(mid, tail);
+  }
+  if(b0 >= b1){
+    const mid = [];
+    for(let i=a0;i<a1;i++) mid.push({op:"delete", a:a[i]});
+    return head.concat(mid, tail);
+  }
+
+  const segALen = a1 - a0;
+  const segBLen = b1 - b0;
+
+  // Small enough: bounded Myers directly
+  if(segALen <= DIFF_LIMITS.MAX_SEGMENT_MYERS && segBLen <= DIFF_LIMITS.MAX_SEGMENT_MYERS){
+    const mid = myersDiff(a.slice(a0,a1), b.slice(b0,b1));
+    return head.concat(mid, tail);
+  }
+
+  // Find unique-line anchors and compute LIS by target index
+  const anchors = findUniqueAnchors(a, a0, a1, b, b0, b1);
+
+  if(!anchors.length){
+    // If still huge and no anchors, avoid freezing:
+    // - If moderately sized, we can still try Myers
+    if(segALen <= DIFF_LIMITS.MAX_SEGMENT_MYERS*2 && segBLen <= DIFF_LIMITS.MAX_SEGMENT_MYERS*2){
+      const mid = myersDiff(a.slice(a0,a1), b.slice(b0,b1));
+      return head.concat(mid, tail);
+    }
+    // - Otherwise, replace-all fallback for the middle segment
+    const mid = [];
+    for(let i=a0;i<a1;i++) mid.push({op:"delete", a:a[i]});
+    for(let j=b0;j<b1;j++) mid.push({op:"insert", b:b[j]});
+    return head.concat(mid, tail);
+  }
+
+  // Recurse between anchors
+  const midOut = [];
+  let prevA = a0, prevB = b0;
+
+  for(const an of anchors){
+    const ai = an.a;
+    const bi = an.b;
+
+    pushAll(midOut, patienceDiffRange(a, prevA, ai, b, prevB, bi, depth+1));
+    midOut.push({op:"equal", a:a[ai], b:b[bi]});
+
+    prevA = ai + 1;
+    prevB = bi + 1;
+  }
+
+  pushAll(midOut, patienceDiffRange(a, prevA, a1, b, prevB, b1, depth+1));
+
+  return head.concat(midOut, tail);
+}
+
+function findUniqueAnchors(a, a0, a1, b, b0, b1){
+  const posA = new Map(); // line -> index or -1 (not unique)
+  for(let i=a0;i<a1;i++){
+    const line = a[i];
+    const prev = posA.get(line);
+    if(prev === undefined) posA.set(line, i);
+    else posA.set(line, -1);
+  }
+
+  const posB = new Map();
+  for(let j=b0;j<b1;j++){
+    const line = b[j];
+    const prev = posB.get(line);
+    if(prev === undefined) posB.set(line, j);
+    else posB.set(line, -1);
+  }
+
+  const pairs = [];
+  for(const [line, ia] of posA.entries()){
+    if(ia < 0) continue;
+    const ib = posB.get(line);
+    if(ib === undefined || ib < 0) continue;
+    pairs.push({a: ia, b: ib});
+  }
+
+  pairs.sort((p,q)=>p.a - q.a);
+  return lisByB(pairs);
+}
+
+function lisByB(pairs){
+  // Longest Increasing Subsequence on b indices
+  const n = pairs.length;
+  if(!n) return [];
+
+  const tails = []; // indices into pairs
+  const prev  = new Array(n).fill(-1);
+
+  for(let i=0;i<n;i++){
+    const bi = pairs[i].b;
+    let lo = 0, hi = tails.length;
+    while(lo < hi){
+      const mid = (lo + hi) >> 1;
+      if(pairs[tails[mid]].b < bi) lo = mid + 1;
+      else hi = mid;
+    }
+    if(lo > 0) prev[i] = tails[lo-1];
+    if(lo === tails.length) tails.push(i);
+    else tails[lo] = i;
+  }
+
+  const out = [];
+  let k = tails[tails.length - 1];
+  while(k >= 0){
+    out.push(pairs[k]);
+    k = prev[k];
+  }
+  out.reverse();
+  return out;
+}
+
 function groupEdits(edits){
   const out = [];
   for(let i=0; i<edits.length; ){
@@ -1922,63 +2112,91 @@ function tokenizeForDiff(text){
 }
 
 
-function inlineCharDiff(oldSeg, newSeg){
-  const A = String(oldSeg ?? "").split("");
-  const B = String(newSeg ?? "").split("");
-  const m = A.length, n = B.length;
+function inlineDiffMyers(oldText, newText, opts, mode){
+  const o = String(oldText ?? "");
+  const n = String(newText ?? "");
+  const normalizePunct = !!(opts && opts.normalizePunct);
+  const ignoreWhitespace = !!(opts && opts.ignoreWhitespace);
 
-  const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
-  for(let i=1;i<=m;i++){
-    for(let j=1;j<=n;j++){
-      dp[i][j] = (A[i-1] === B[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  // Guardrails for very long lines/tokens (prevents freezing on large XML/text blocks)
+  const maxLen = Math.max(o.length, n.length);
+  const CHAR_INLINE_LIMIT = 1200;     // beyond this, fall back to word-level inline diff
+  const TOKEN_HARD_LIMIT  = 7000;     // beyond this, skip inline highlighting
+
+  let useMode = mode || "word";
+  if(useMode === "char" && maxLen > CHAR_INLINE_LIMIT){
+    useMode = "word";
+  }
+
+  const rawA = (useMode === "char") ? o.split("") : splitKeepSpaces(o);
+  const rawB = (useMode === "char") ? n.split("") : splitKeepSpaces(n);
+
+  const isWs = (t)=>/^\s+$/.test(String(t||""));
+
+  const keyTok = (tok)=>{
+    const ws = isWs(tok);
+    let t = String(tok ?? "");
+    // normalize special spaces
+    t = t.replace(/\u00A0|\u202F/g, " ");
+    if(ws){
+      return ignoreWhitespace ? " " : t;
+    }
+    if(normalizePunct){
+      t = normalizeTokenForDiff(t);
+    }else{
+      try{ t = t.normalize("NFKC"); }catch(_e){}
+    }
+    if(ignoreWhitespace){
+      t = t.replace(/\s+/g, " ");
+    }
+    return t;
+  };
+
+  const keyA = rawA.map(keyTok);
+  const keyB = rawB.map(keyTok);
+
+  // If too large, skip inline diff to keep UI responsive
+  if(keyA.length + keyB.length > TOKEN_HARD_LIMIT){
+    return {oldHtml: escapeHtml(o), newHtml: escapeHtml(n)};
+  }
+
+  // Quick equality check
+  if(keyA.length === keyB.length){
+    let same = true;
+    for(let i=0;i<keyA.length;i++){
+      if(keyA[i] !== keyB[i]){ same = false; break; }
+    }
+    if(same){
+      return {oldHtml: escapeHtml(o), newHtml: escapeHtml(n)};
     }
   }
 
-  const ops = [];
-  let i=m, j=n;
-  while(i>0 || j>0){
-    if(i>0 && j>0 && A[i-1] === B[j-1]){
-      ops.unshift({t:"eq", v:A[i-1]}); i--; j--;
-    } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
-      ops.unshift({t:"add", v:B[j-1]}); j--;
-    } else {
-      ops.unshift({t:"del", v:A[i-1]}); i--;
+  // Myers on normalized keys (fast, no quadratic DP matrix)
+  const edits = myersDiff(keyA, keyB);
+
+  let ai = 0, bi = 0;
+  let oldHtml = "", newHtml = "";
+
+  for(const e of edits){
+    if(e.op === "equal"){
+      oldHtml += escapeHtml(rawA[ai] ?? "");
+      newHtml += escapeHtml(rawB[bi] ?? "");
+      ai++; bi++;
+    }else if(e.op === "delete"){
+      oldHtml += `<span class="inl-del">${escapeHtml(rawA[ai] ?? "")}</span>`;
+      ai++;
+    }else if(e.op === "insert"){
+      newHtml += `<span class="inl-add">${escapeHtml(rawB[bi] ?? "")}</span>`;
+      bi++;
     }
   }
-
-  let oldHtml="", newHtml="";
-  let delBuf="", addBuf="";
-
-  const flushDel = ()=>{
-    if(delBuf){
-      oldHtml += `<span class="inl-del">${escapeHtml(delBuf)}</span>`;
-      delBuf = "";
-    }
-  };
-  const flushAdd = ()=>{
-    if(addBuf){
-      newHtml += `<span class="inl-add">${escapeHtml(addBuf)}</span>`;
-      addBuf = "";
-    }
-  };
-  const flushBoth = ()=>{ flushDel(); flushAdd(); };
-
-  ops.forEach(o=>{
-    if(o.t === "eq"){
-      flushBoth();
-      const v = escapeHtml(o.v);
-      oldHtml += v; newHtml += v;
-    } else if(o.t === "del"){
-      flushAdd();
-      delBuf += o.v;
-    } else if(o.t === "add"){
-      flushDel();
-      addBuf += o.v;
-    }
-  });
-  flushBoth();
 
   return {oldHtml, newHtml};
+}
+
+function inlineCharDiff(oldSeg, newSeg, opts){
+  // Character-level highlight, with safety fallback for very long lines.
+  return inlineDiffMyers(oldSeg, newSeg, opts || {normalizePunct:false, ignoreWhitespace:false}, "char");
 }
 
 
@@ -2302,7 +2520,7 @@ if(doOverlay){
     if(e.op === "delete"){
       if(!isNewSide){
         const line = oldList[i] || "";
-        lineRanges.push(...findRangesByLine(thisData.text, line));
+        pushAll(lineRanges, findRangesByLine(thisData.text, line));
       }
       i++;
       return;
@@ -2311,7 +2529,7 @@ if(doOverlay){
     if(e.op === "insert"){
       if(isNewSide){
         const line = newList[j] || "";
-        lineRanges.push(...findRangesByLine(thisData.text, line));
+        pushAll(lineRanges, findRangesByLine(thisData.text, line));
       }
       j++;
       return;
@@ -2330,7 +2548,7 @@ if(doOverlay){
 }
 
 function renderSplitDiff(oldLines, newLines, options){
-  const edits = myersDiff(oldLines, newLines);
+  const edits = diffLinesAdaptive(oldLines, newLines);
   const grouped = groupEdits(edits);
 
   // Optional compact mode: show only changes + N lines of context
@@ -2541,8 +2759,8 @@ function openNodeDiffModal(oldNode, newNode){
 
   // include footnotes always for node diff
   if(oldNode.footnoteLines?.length || newNode.footnoteLines?.length){
-    aLines.push(""); aLines.push("Footnotes:"); aLines.push(...(oldNode.footnoteLines||[]));
-    bLines.push(""); bLines.push("Footnotes:"); bLines.push(...(newNode.footnoteLines||[]));
+    aLines.push(""); aLines.push("Footnotes:"); pushAll(aLines, (oldNode.footnoteLines||[]));
+    bLines.push(""); bLines.push("Footnotes:"); pushAll(bLines, (newNode.footnoteLines||[]));
   }
 
   const html = `<div class="diff-wrap" style="border:none; box-shadow:none;">
@@ -2856,6 +3074,38 @@ const ghState = {
   }
 };
 
+// Cache heavy computations (pretty-printed XML + split lines) to keep large files responsive
+const ghCache = {
+  xml: {
+    old: { raw:null, pretty:null, rawSrc:null, prettySrc:null },
+    new: { raw:null, pretty:null, rawSrc:null, prettySrc:null }
+  }
+};
+
+function resetGhCache(){
+  ghCache.xml.old = { raw:null, pretty:null, rawSrc:null, prettySrc:null };
+  ghCache.xml.new = { raw:null, pretty:null, rawSrc:null, prettySrc:null };
+  // Force GH panes to re-render when opened again
+  ghState.rendered = {xml:false, content:false, checks:false};
+  ghState.nav.xml = {idx:-1, rows:[]};
+  ghState.nav.content = {idx:-1, rows:[]};
+}
+
+function getXmlLinesCached(which, xmlText, pretty){
+  const store = ghCache.xml[which];
+  const key = pretty ? "pretty" : "raw";
+  const srcKey = pretty ? "prettySrc" : "rawSrc";
+
+  if(store && store[srcKey] === xmlText && Array.isArray(store[key])){
+    return store[key];
+  }
+  const lines = getXmlLines(xmlText, pretty);
+  store[srcKey] = xmlText;
+  store[key] = lines;
+  return lines;
+}
+
+
 function setGhOpen(open){
   const b = $("ghBackdrop");
   if(!b) return;
@@ -2981,57 +3231,13 @@ function tokenizeForMode(text, opts){
 }
 
 function inlineTokenDiffMode(oldLine, newLine, opts){
-  const A = tokenizeForMode(oldLine, opts);
-  const B = tokenizeForMode(newLine, opts);
-
-  const m = A.norm.length, n = B.norm.length;
-  const dp = Array.from({length: m+1}, ()=> Array(n+1).fill(0));
-  for(let i=1;i<=m;i++){
-    for(let j=1;j<=n;j++){
-      dp[i][j] = (A.norm[i-1] === B.norm[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
-    }
-  }
-
-  const ops = [];
-  let i=m, j=n;
-  while(i>0 || j>0){
-    if(i>0 && j>0 && A.norm[i-1] === B.norm[j-1]){
-      ops.unshift({t:"eq", a:A.raw[i-1], b:B.raw[j-1]}); i--; j--;
-    } else if(j>0 && (i===0 || dp[i][j-1] >= dp[i-1][j])){
-      ops.unshift({t:"add", v:B.raw[j-1]}); j--;
-    } else {
-      ops.unshift({t:"del", v:A.raw[i-1]}); i--;
-    }
-  }
-
-  let oldHtml="", newHtml="";
-  for(let k=0;k<ops.length;k++){
-    const o = ops[k];
-
-    if(o.t === "eq"){
-      oldHtml += escapeHtml(o.a);
-      newHtml += escapeHtml(o.b);
-      continue;
-    }
-
-    // If you choose to ignore whitespace, don't highlight whitespace-only changes
-    if(opts.ignoreWhitespace){
-      if(o.t === "del" && /^\s+$/.test(String(o.v||""))){ oldHtml += escapeHtml(o.v); continue; }
-      if(o.t === "add" && /^\s+$/.test(String(o.v||""))){ newHtml += escapeHtml(o.v); continue; }
-    }
-
-    if(o.t === "del"){
-      oldHtml += `<span class="inl-del">${escapeHtml(o.v)}</span>`;
-    } else if(o.t === "add"){
-      newHtml += `<span class="inl-add">${escapeHtml(o.v)}</span>`;
-    }
-  }
-
-  return {oldHtml, newHtml};
+  // Word-level (token) inline highlight using Myers on normalized tokens.
+  // Avoids quadratic DP matrices that freeze on large documents.
+  return inlineDiffMyers(oldLine, newLine, opts || {normalizePunct:true, ignoreWhitespace:false}, "word");
 }
 
 function renderSplitDiffGH(oldLines, newLines, opts){
-  const edits = myersDiff(oldLines, newLines);
+  const edits = diffLinesAdaptive(oldLines, newLines);
   const grouped = groupEdits(edits);
 
   // Hide unchanged lines (compact) with context
@@ -3104,7 +3310,7 @@ function renderSplitDiffGH(oldLines, newLines, opts){
 
         if(aLine && bLine){
           if(opts.precision === "char"){
-            const cd = inlineCharDiff(aLine, bLine);
+            const cd = inlineCharDiff(aLine, bLine, {normalizePunct: !!opts.normalizePunct, ignoreWhitespace: !!opts.ignoreWhitespace});
             left = cd.oldHtml;
             right = cd.newHtml;
           } else {
@@ -3164,16 +3370,21 @@ function initDiffNavigation(which, hostEl, prevBtn, nextBtn, pillEl){
 function renderGhXmlPane(){
   const host = $("ghPane-xml");
   if(!host) return;
+
+  const maxLen = Math.max(String(state.oldText || "").length, String(state.newText || "").length);
+  const defaultPretty = maxLen <= 2000000; // Auto-disable Pretty for large XML (speed + stability)
+
   host.innerHTML = `
     <div class="gh-note">
       <b>Direct XML Diff:</b> compares the uploaded XML files line-by-line (GitHub/DiffChecker style).<br/>
       Use <b>Character</b> precision for exact changes (including spaces).
+      ${defaultPretty ? "" : '<div style="margin-top:6px; opacity:.9">Pretty is off by default for large XML to keep it fast.</div>'}
     </div>
     <div class="diff-wrap" style="border:none; box-shadow:none;">
       <div class="diff-toolbar">
         <div class="left">
           <span class="pill" id="xmlStatsPill">—</span>
-          <label><input type="checkbox" id="xmlPretty" checked> Pretty</label>
+          <label><input type="checkbox" id="xmlPretty" ${defaultPretty ? "checked" : ""}> Pretty</label>
           <label><input type="checkbox" id="xmlHide" checked> Hide unchanged</label>
           <label class="mini">Precision</label>
           <select id="xmlPrecision" class="select">
@@ -3193,26 +3404,43 @@ function renderGhXmlPane(){
     </div>
   `;
 
+  let xmlJob = 0;
   const rerender = ()=>{
+    const job = ++xmlJob;
+
     const pretty = $("xmlPretty").checked;
     const compact = $("xmlHide").checked;
     const precision = $("xmlPrecision").value;
     const normalizePunct = $("xmlNormalize").checked;
     const ignoreWhitespace = $("xmlIgnoreWs").checked;
 
-    const a = getXmlLines(state.oldText, pretty);
-    const b = getXmlLines(state.newText, pretty);
+    // Show a lightweight loader so the UI doesn't look frozen on big files
+    $("xmlDiffHost").innerHTML = `<div class="gh-loading">Computing diff… (large files may take a moment)</div>`;
 
-    const rendered = renderSplitDiffGH(a, b, {compact, context:3, precision, normalizePunct, ignoreWhitespace});
-    $("xmlDiffHost").innerHTML = rendered.html;
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        if(job !== xmlJob) return;
+        try{
+          const a = getXmlLinesCached("old", state.oldText, pretty);
+          const b = getXmlLinesCached("new", state.newText, pretty);
 
-    const stats = diffLineStats(rendered.grouped);
-    $("xmlStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+          const ctx = (a.length + b.length > 120000) ? 1 : 3;
+          const rendered = renderSplitDiffGH(a, b, {compact, context:ctx, precision, normalizePunct, ignoreWhitespace});
+          $("xmlDiffHost").innerHTML = rendered.html;
 
-    initDiffNavigation("xml", $("xmlDiffHost"), $("xmlPrevBtn"), $("xmlNextBtn"), $("xmlNavPill"));
-    updateGhCountsPill("xml");
+          const stats = diffLineStats(rendered.grouped);
+          $("xmlStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+
+          initDiffNavigation("xml", $("xmlDiffHost"), $("xmlPrevBtn"), $("xmlNextBtn"), $("xmlNavPill"));
+          updateGhCountsPill("xml");
+        }catch(err){
+          const msg = (err && (err.message || String(err))) || "Unknown error";
+          $("xmlDiffHost").innerHTML = `<div class="gh-loading" style="color:var(--red); font-weight:900">Diff failed: ${escapeHtml(msg)}</div>
+          <div class="gh-loading" style="margin-top:6px">Tip: For very large XML, try unchecking <b>Pretty</b> or keeping <b>Hide unchanged</b> enabled.</div>`;
+        }
+      }, 20);
+    });
   };
-
   ["xmlPretty","xmlHide","xmlPrecision","xmlNormalize","xmlIgnoreWs"].forEach(id=>{
     $(id).addEventListener("change", rerender);
   });
@@ -3253,7 +3481,10 @@ function renderGhContentPane(){
     </div>
   `;
 
+  let contentJob = 0;
   const rerender = ()=>{
+    const job = ++contentJob;
+
     const includeHeadings = $("contentHeadings").checked;
     const includeFootnotes = $("contentFootnotes").checked;
     const compact = $("contentHide").checked;
@@ -3261,19 +3492,30 @@ function renderGhContentPane(){
     const normalizePunct = $("contentNormalize").checked;
     const ignoreWhitespace = $("contentIgnoreWs").checked;
 
-    const a = buildContentLines(state.oldFlat, {includeHeadings, includeFootnotes});
-    const b = buildContentLines(state.newFlat, {includeHeadings, includeFootnotes});
+    $("contentDiffHost").innerHTML = `<div class="gh-loading">Computing diff… (large documents may take a moment)</div>`;
 
-    const rendered = renderSplitDiffGH(a, b, {compact, context:3, precision, normalizePunct, ignoreWhitespace});
-    $("contentDiffHost").innerHTML = rendered.html;
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        if(job !== contentJob) return;
+        try{
+          const a = buildContentLines(state.oldFlat, {includeHeadings, includeFootnotes});
+          const b = buildContentLines(state.newFlat, {includeHeadings, includeFootnotes});
 
-    const stats = diffLineStats(rendered.grouped);
-    $("contentStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+          const rendered = renderSplitDiffGH(a, b, {compact, context:3, precision, normalizePunct, ignoreWhitespace});
+          $("contentDiffHost").innerHTML = rendered.html;
 
-    initDiffNavigation("content", $("contentDiffHost"), $("contentPrevBtn"), $("contentNextBtn"), $("contentNavPill"));
-    updateGhCountsPill("content");
+          const stats = diffLineStats(rendered.grouped);
+          $("contentStatsPill").textContent = `${stats.dels} removals · ${stats.adds} additions`;
+
+          initDiffNavigation("content", $("contentDiffHost"), $("contentPrevBtn"), $("contentNextBtn"), $("contentNavPill"));
+          updateGhCountsPill("content");
+        }catch(err){
+          const msg = (err && (err.message || String(err))) || "Unknown error";
+          $("contentDiffHost").innerHTML = `<div class="gh-loading" style="color:var(--red); font-weight:900">Diff failed: ${escapeHtml(msg)}</div>`;
+        }
+      }, 20);
+    });
   };
-
   ["contentHeadings","contentFootnotes","contentHide","contentPrecision","contentNormalize","contentIgnoreWs"].forEach(id=>{
     $(id).addEventListener("change", rerender);
   });
@@ -3290,10 +3532,10 @@ function renderGhChecksPane(){
   if(!state.issues || !state.issues.length){
     const issues = [];
     try{
-      issues.push(...validateDoc(state.oldDoc, "old"));
-      issues.push(...validateDoc(state.newDoc, "new"));
+      pushAll(issues, validateDoc(state.oldDoc, "old"));
+      pushAll(issues, validateDoc(state.newDoc, "new"));
       const matchInfo = {match: state.match || new Map()};
-      issues.push(...validateComparison(state.oldDoc, state.newDoc, matchInfo));
+      pushAll(issues, validateComparison(state.oldDoc, state.newDoc, matchInfo));
     }catch(_e){}
     state.issues = issues;
   }
@@ -3358,15 +3600,18 @@ function renderGhChecksPane(){
   updateGhCountsPill("checks");
 }
 
+/* Open GH modal from the results top bar */
 const ghOpenBtn = $("ghOpenBtn");
 if(ghOpenBtn){
   ghOpenBtn.addEventListener("click", ()=>{
+    // Compute issues up-front so the badge is ready
     state.issues = [];
     try{
-      state.issues.push(...validateDoc(state.oldDoc, "old"));
-      state.issues.push(...validateDoc(state.newDoc, "new"));
-      state.issues.push(...validateComparison(state.oldDoc, state.newDoc, {match: state.match || new Map()}));
+      state.pushAll(issues, validateDoc(state.oldDoc, "old"));
+      state.pushAll(issues, validateDoc(state.newDoc, "new"));
+      pushAll(state.issues, validateComparison(state.oldDoc, state.newDoc, {match: state.match || new Map()}));
     }catch(_e){}
+    // Reset render flags so it always reflects latest compare
     ghState.rendered = {xml:false, content:false, checks:false};
     setGhOpen(true);
     ghSelectPane("xml");
@@ -3380,6 +3625,9 @@ document.querySelectorAll(".gh-tab").forEach(btn=>{
 });
 
 
+/* ============================================================================
+   Downloads (removed)
+============================================================================ */
 
 </script>
 </body>
